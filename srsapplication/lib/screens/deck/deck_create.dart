@@ -1,0 +1,267 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:srsapplication/models/deck_model.dart';
+
+class CreateEditDeckScreen extends StatefulWidget {
+  final Deck? deckToEdit;
+  final String? parentDeckId;
+
+  const CreateEditDeckScreen({super.key, this.deckToEdit, this.parentDeckId});
+
+  @override
+  State<CreateEditDeckScreen> createState() => _CreateEditDeckScreenState();
+}
+
+class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  late TextEditingController _nameController;
+  late TextEditingController _descriptionController;
+
+  String? _selectedLanguageFrom;
+  String? _selectedLanguageTo;
+  String? _currentParentId;
+
+  bool _isLoading = false;
+  bool get _isEditing => widget.deckToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: widget.deckToEdit?.name ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: widget.deckToEdit?.description ?? '',
+    );
+    _selectedLanguageFrom = widget.deckToEdit?.languageFrom;
+    _selectedLanguageTo = widget.deckToEdit?.languageTo;
+    _currentParentId = widget.deckToEdit?.parentId ?? widget.parentDeckId;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _showErrorSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
+
+  void _showSuccessSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  Future<void> _saveDeck() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      final User? currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        _showErrorSnackbar('Помилка: користувач не автентифікований.');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      try {
+        final now = Timestamp.now();
+        final deckData = {
+          'userId': currentUser.uid,
+          'name': _nameController.text.trim(),
+          'description':
+              _descriptionController.text.trim().isNotEmpty
+                  ? _descriptionController.text.trim()
+                  : null,
+          'languageFrom': _selectedLanguageFrom,
+          'languageTo': _selectedLanguageTo,
+          'updatedAt': now,
+          'parentId': widget.deckToEdit?.parentId ?? widget.parentDeckId,
+        };
+
+        if (_isEditing && widget.deckToEdit != null) {
+          await _firestore
+              .collection('decks')
+              .doc(widget.deckToEdit!.id)
+              .update(deckData);
+          _showSuccessSnackbar('Колоду успішно оновлено!');
+        } else {
+          deckData['createdAt'] = now;
+          deckData['cardCount'] = 0;
+          await _firestore.collection('decks').add(deckData);
+          _showSuccessSnackbar('Колоду успішно створено!');
+        }
+        Navigator.pop(context);
+      } catch (e) {
+        print("Помилка збереження колоди: $e");
+        _showErrorSnackbar(
+          'Не вдалося зберегти колоду. Сталась невідома помилка',
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Редагувати колоду' : 'Створити нову колоду'),
+        actions: [
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _saveDeck,
+              tooltip: 'Зберегти',
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Назва колоди *',
+                  hintText: 'Наприклад, "English B2 adverbs"',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Назва не може бути порожньою';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16.0),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Опис (необов\'язково)',
+                  hintText: 'Короткий опис вмісту колоди',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24.0),
+              Text(
+                'Мова оригіналу (From):',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              DropdownButton<String>(
+                value: _selectedLanguageFrom,
+                hint: const Text('Виберіть мову'),
+                isExpanded: true,
+                items:
+                    <String>[
+                      'en',
+                      'de',
+                      'es',
+                      'fr',
+                      'it',
+                      'uk',
+                      'pl',
+                    ] // Приклад мов
+                    .map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value.toUpperCase()),
+                      );
+                    }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedLanguageFrom = newValue;
+                  });
+                },
+              ),
+              const SizedBox(height: 16.0),
+              Text(
+                'Мова перекладу (To):',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              DropdownButton<String>(
+                value: _selectedLanguageTo,
+                hint: const Text('Виберіть мову'),
+                isExpanded: true,
+                items:
+                    <String>[
+                      'en',
+                      'de',
+                      'es',
+                      'fr',
+                      'it',
+                      'uk',
+                      'pl',
+                    ] // Приклад мов
+                    .map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value.toUpperCase()),
+                      );
+                    }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedLanguageTo = newValue;
+                  });
+                },
+              ),
+              const SizedBox(height: 32.0),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.save_alt_rounded),
+                label: Text(_isLoading ? 'Збереження...' : 'Зберегти колоду'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: _isLoading ? null : _saveDeck,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

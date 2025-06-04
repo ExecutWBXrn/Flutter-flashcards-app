@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "409022677678",
+    "project_id": "srs-flashcard-dp",
+    "storage_bucket": "srs-flashcard-dp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:409022677678:android:0bff2c6ae049a69e41633f",
+        "android_client_info": {
+          "package_name": "com.example.srsapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "409022677678-qbdiorktcs0e3ht9hr459f4bu3bqk96i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.srsapplication",
+            "certificate_hash": "d548fcaa99e565d9385279f837c9be2b7d553144"
+          }
+        },
+        {
+          "client_id": "409022677678-92udbtt4hjlo6ccitj2l7akd0ooarsh8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiRXXj-iMSXW5WAmUNqit1Rw3Cmf0lIq4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "409022677678-92udbtt4hjlo6ccitj2l7akd0ooarsh8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "409022677678-njkimlmhndn7av99r2oe9shs987onahm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.srsapplication"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
