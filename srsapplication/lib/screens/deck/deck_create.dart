@@ -23,7 +23,6 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
 
   String? _selectedLanguageFrom;
   String? _selectedLanguageTo;
-  String? _currentParentId;
 
   bool _isLoading = false;
   bool get _isEditing => widget.deckToEdit != null;
@@ -39,7 +38,6 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
     );
     _selectedLanguageFrom = widget.deckToEdit?.languageFrom;
     _selectedLanguageTo = widget.deckToEdit?.languageTo;
-    _currentParentId = widget.deckToEdit?.parentId ?? widget.parentDeckId;
   }
 
   @override
@@ -193,16 +191,9 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
                 hint: const Text('Виберіть мову'),
                 isExpanded: true,
                 items:
-                    <String>[
-                      'en',
-                      'de',
-                      'es',
-                      'fr',
-                      'it',
-                      'uk',
-                      'pl',
-                    ] // Приклад мов
-                    .map((String value) {
+                    <String>['en', 'de', 'es', 'fr', 'it', 'uk', 'pl'].map((
+                      String value,
+                    ) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value.toUpperCase()),
@@ -224,16 +215,9 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
                 hint: const Text('Виберіть мову'),
                 isExpanded: true,
                 items:
-                    <String>[
-                      'en',
-                      'de',
-                      'es',
-                      'fr',
-                      'it',
-                      'uk',
-                      'pl',
-                    ] // Приклад мов
-                    .map((String value) {
+                    <String>['en', 'de', 'es', 'fr', 'it', 'uk', 'pl'].map((
+                      String value,
+                    ) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value.toUpperCase()),

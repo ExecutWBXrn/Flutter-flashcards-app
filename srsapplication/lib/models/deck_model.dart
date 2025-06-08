@@ -63,4 +63,24 @@ class Deck {
       'depth': depth,
     };
   }
+
+  Deck copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? userId,
+    Timestamp? createdAt,
+    Timestamp? updatedAt,
+    int? cardCount,
+  }) {
+    return Deck(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      userId: userId ?? this.userId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      cardCount: cardCount ?? this.cardCount,
+    );
+  }
 }

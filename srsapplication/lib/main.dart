@@ -31,3 +31,5 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// Copyright (c) 2025 Roman Beniuk. All Rights Reserved.

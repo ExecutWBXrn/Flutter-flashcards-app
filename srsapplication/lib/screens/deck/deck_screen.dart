@@ -6,7 +6,10 @@ import 'package:srsapplication/screens/deck/deck_create.dart';
 import 'package:srsapplication/screens/card/cards_screen.dart';
 
 class DeckScreen extends StatefulWidget {
-  const DeckScreen({super.key});
+  final String? parentId;
+  final String? parentDeckName;
+
+  const DeckScreen({super.key, this.parentId, this.parentDeckName});
 
   @override
   State<StatefulWidget> createState() {
@@ -14,18 +17,40 @@ class DeckScreen extends StatefulWidget {
   }
 }
 
+enum MenuAction { edit, delete }
+
 class _DeckScreenState extends State<DeckScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  User? _currentUser;
+  Deck? _choosenDeck;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = _auth.currentUser;
+    print(
+      "[DeckScreen CONSTRUCTOR] parentId: ${widget.parentId}, parentDeckName: ${widget.parentDeckName}",
+    );
+  }
 
   Stream<List<Deck>> _getUserDecksStream() {
     final User? user = _auth.currentUser;
     if (user == null) {
       return Stream.value([]);
     }
-    return _firestore
+
+    Query query = _firestore
         .collection('decks')
-        .where('userId', isEqualTo: user.uid)
+        .where('userId', isEqualTo: user.uid);
+
+    if (widget.parentId == null) {
+      query = query.where('parentId', isNull: true);
+    } else {
+      query = query.where('parentId', isEqualTo: widget.parentId);
+    }
+
+    return query
         .orderBy('createdAt', descending: true)
         .withConverter<Deck>(
           fromFirestore: Deck.fromFirestore,
@@ -36,17 +61,30 @@ class _DeckScreenState extends State<DeckScreen> {
   }
 
   void _navigateToCreateDeckScreen() {
+    setState(() {
+      _choosenDeck = null;
+    });
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CreateEditDeckScreen()),
+      MaterialPageRoute(
+        builder:
+            (context) => CreateEditDeckScreen(parentDeckId: widget.parentId),
+      ),
     );
     print("Перехід на екран створення колоди");
   }
 
   void _navigateToDeckDetailScreen(Deck deck) {
+    setState(() {
+      _choosenDeck = null;
+    });
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CardListScreen()),
+      MaterialPageRoute(
+        builder:
+            (context) =>
+                CardListScreen(parentId: deck.id, parentDeckName: deck.name),
+      ),
     );
   }
 
@@ -58,6 +96,18 @@ class _DeckScreenState extends State<DeckScreen> {
         backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
+  }
+
+  Future<void> deleteDeckOnly(String deckId) async {
+    setState(() {
+      _choosenDeck = null;
+    });
+    try {
+      await FirebaseFirestore.instance.collection('decks').doc(deckId).delete();
+      print('Deck document $deckId deleted.');
+    } catch (e) {
+      print('Error deleting deck document $deckId: $e');
+    }
   }
 
   Widget _buildBottomNavItem(
@@ -103,6 +153,43 @@ class _DeckScreenState extends State<DeckScreen> {
         title: Text('Колоди'),
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
+        actions: [
+          if (_choosenDeck != null)
+            PopupMenuButton(
+              icon: Icon(Icons.more_vert),
+              itemBuilder:
+                  (BuildContext context) => <PopupMenuEntry<MenuAction>>[
+                    const PopupMenuItem<MenuAction>(
+                      value: MenuAction.edit,
+                      child: ListTile(
+                        leading: Icon(Icons.edit),
+                        title: Text('Edit'),
+                      ),
+                    ),
+                    const PopupMenuItem<MenuAction>(
+                      value: MenuAction.delete,
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text('Delete'),
+                      ),
+                    ),
+                  ],
+              onSelected: (MenuAction action) {
+                if (action == MenuAction.delete) {
+                  deleteDeckOnly(_choosenDeck!.id);
+                } else if (action == MenuAction.edit) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) =>
+                              CreateEditDeckScreen(deckToEdit: _choosenDeck),
+                    ),
+                  );
+                }
+              },
+            ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -233,8 +320,13 @@ class _DeckScreenState extends State<DeckScreen> {
             itemCount: decks.length,
             itemBuilder: (context, index) {
               final deck = decks[index];
+
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 8),
+                color:
+                    _choosenDeck?.id == deck.id
+                        ? Theme.of(context).primaryColor
+                        : null,
                 child: ListTile(
                   title: Text(
                     deck.name,
@@ -262,6 +354,11 @@ class _DeckScreenState extends State<DeckScreen> {
                     onPressed: () {},
                     icon: Icon(Icons.play_arrow, size: 40, color: Colors.green),
                   ),
+                  onLongPress: () {
+                    setState(() {
+                      _choosenDeck = deck;
+                    });
+                  },
                   onTap: () {
                     _navigateToDeckDetailScreen(deck);
                   },
