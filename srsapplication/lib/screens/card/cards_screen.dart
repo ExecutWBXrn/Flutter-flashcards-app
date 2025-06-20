@@ -1,21 +1,25 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:srsapplication/models/deck_model.dart';
 import 'package:srsapplication/models/card_model.dart';
 import 'package:srsapplication/screens/deck/deck_create.dart';
 import 'package:srsapplication/screens/card/card_create.dart';
+import 'package:srsapplication/screens/games/game.dart';
 
 import '../deck/deck_screen.dart';
 
 class CardListScreen extends StatefulWidget {
   final String parentId;
   final String? parentDeckName;
+  final bool? toFrom;
 
   const CardListScreen({
     super.key,
     required this.parentId,
     this.parentDeckName,
+    this.toFrom,
   });
 
   @override
@@ -29,13 +33,36 @@ class _cardListScreenState extends State<CardListScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Deck? _choosenDeck;
   FlashCard? _choosenCard;
+  bool? _currentFrom;
 
   @override
   void initState() {
     super.initState();
+    _currentFrom = widget.toFrom ?? true;
+    _initializeAsyncData();
     print(
       "[CardListScreen initState] deckId: ${widget.parentId}, deckName: ${widget.parentDeckName}",
     );
+  }
+
+  Future<void> _initializeAsyncData() async {
+    await _loadData();
+    if (_currentFrom == true) {
+      await _saveData(true);
+    }
+  }
+
+  Future<void> _saveData(bool ToFrom) async {
+    final SharedPreferences pref = await SharedPreferences.getInstance();
+    await pref.setBool("toFrom", ToFrom);
+  }
+
+  Future<void> _loadData() async {
+    final SharedPreferences pref = await SharedPreferences.getInstance();
+    setState(() {
+      _currentFrom = pref.getBool("toFrom");
+      _currentFrom ??= true;
+    });
   }
 
   Stream<List<Deck>> _getUserDecksStream({String order = 'createdAt'}) {
@@ -149,16 +176,6 @@ class _cardListScreenState extends State<CardListScreen> {
     );
   }
 
-  void _handleCardTap(FlashCard card) {
-    setState(() {
-      _choosenDeck = null;
-      _choosenCard = null;
-    });
-    // Наприклад, відкрити екран перегляду/редагування картки
-    print("Натиснуто картку: ${card.wordFrom}");
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => ViewEditCardScreen(card: card)));
-  }
-
   void _navigateToCreateCardScreen() {
     setState(() {
       _choosenDeck = null;
@@ -188,16 +205,9 @@ class _cardListScreenState extends State<CardListScreen> {
     );
   }
 
-  Future<void> deleteDeckOnly(String deckId) async {
-    setState(() {
-      _choosenDeck = null;
-    });
-    try {
-      await FirebaseFirestore.instance.collection('decks').doc(deckId).delete();
-      print('Deck document $deckId deleted.');
-    } catch (e) {
-      print('Error deleting deck document $deckId: $e');
-    }
+  Future<void> deleteDeck(String deckId) async {
+    final deckService = DeckService();
+    await deckService.deleteDeckHierarchically(deckId);
   }
 
   Future<void> deleteCardOnly(String cardId) async {
@@ -253,7 +263,7 @@ class _cardListScreenState extends State<CardListScreen> {
               onSelected: (MenuAction action) {
                 if (action == MenuAction.delete) {
                   _choosenDeck != null
-                      ? deleteDeckOnly(_choosenDeck!.id)
+                      ? deleteDeck(_choosenDeck!.id)
                       : deleteCardOnly(_choosenCard!.cardId);
                 } else if (action == MenuAction.edit) {
                   _choosenDeck != null
@@ -278,6 +288,26 @@ class _cardListScreenState extends State<CardListScreen> {
                       );
                 }
               },
+            )
+          else
+            Padding(
+              padding: EdgeInsets.only(right: 15),
+              child: Row(
+                children: [
+                  Text(_currentFrom ?? true ? "M" : "S"),
+                  IconButton(
+                    onPressed: () {
+                      bool currentValue = _currentFrom ?? true;
+                      setState(() {
+                        _currentFrom = !currentValue;
+                      });
+                      _saveData(_currentFrom!);
+                    },
+                    icon: Icon(Icons.compare_arrows),
+                  ),
+                  Text(_currentFrom ?? true ? "S" : "M"),
+                ],
+              ),
             ),
         ],
       ),
@@ -334,13 +364,83 @@ class _cardListScreenState extends State<CardListScreen> {
                             ),
                           ],
                         ),
-                        trailing: IconButton(
-                          onPressed: () {},
+                        trailing: PopupMenuButton<GameAction>(
                           icon: Icon(
                             Icons.play_arrow,
                             size: 40,
                             color: Colors.green,
                           ),
+                          itemBuilder:
+                              (
+                                BuildContext context,
+                              ) => <PopupMenuEntry<GameAction>>[
+                                const PopupMenuItem<GameAction>(
+                                  value: GameAction.learn,
+                                  child: ListTile(
+                                    leading: Icon(Icons.task_alt),
+                                    title: Text('Learn it'),
+                                  ),
+                                ),
+                                const PopupMenuItem<GameAction>(
+                                  value: GameAction.repeat,
+                                  child: ListTile(
+                                    leading: Icon(Icons.assignment_outlined),
+                                    title: Text('Write it'),
+                                  ),
+                                ),
+                                const PopupMenuItem<GameAction>(
+                                  value: GameAction.repeat2,
+                                  child: ListTile(
+                                    leading: Icon(Icons.assignment_outlined),
+                                    title: Text('Write it mode 2'),
+                                  ),
+                                ),
+                              ],
+                          onSelected: (GameAction action) {
+                            if (deck.cardCount > 0) {
+                              if (action == GameAction.learn) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => GamePage(
+                                          deckId: deck.id,
+                                          gameMode: 0,
+                                          toFrom: _currentFrom ?? true,
+                                        ),
+                                  ),
+                                );
+                              } else if (action == GameAction.repeat) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => GamePage(
+                                          deckId: deck.id,
+                                          gameMode: 1,
+                                          toFrom: _currentFrom ?? true,
+                                        ),
+                                  ),
+                                );
+                              } else if (action == GameAction.repeat2) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => GamePage(
+                                          deckId: deck.id,
+                                          gameMode: 2,
+                                          toFrom: _currentFrom ?? true,
+                                        ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              _showErrorSnackbar(
+                                "Додайте картки в колоду для їхнього вивчення",
+                              );
+                            }
+                          },
                         ),
                         onLongPress: () {
                           setState(() {
@@ -410,9 +510,9 @@ class _cardListScreenState extends State<CardListScreen> {
                           style: TextStyle(fontSize: 20),
                         ),
                         title: Text(
-                          "|",
+                          "${((card.proficiencyLevel / 6) * 100).round()}%",
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 20),
+                          style: TextStyle(fontSize: 10),
                         ),
                         trailing: Text(
                           card.wordTo,
@@ -423,7 +523,19 @@ class _cardListScreenState extends State<CardListScreen> {
                             _choosenCard = card;
                           });
                         },
-                        onTap: () => _handleCardTap(card),
+                        onTap:
+                            () => {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => CreateEditCardScreen(
+                                        existingCard: card,
+                                        deckId: card.deckId,
+                                      ),
+                                ),
+                              ),
+                            },
                       ),
                     );
                   }, childCount: cards.length),

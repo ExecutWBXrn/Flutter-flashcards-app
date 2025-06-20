@@ -69,7 +69,6 @@ class _AuthScreenState extends State<AuthScreen> {
         credential,
       );
     } on FirebaseAuthException catch (e) {
-      // Обробка специфічних помилок Firebase Auth
       String message = "Помилка входу через Google. Спробуйте пізніше.";
       if (e.code == 'account-exists-with-different-credential') {
         message =
@@ -77,13 +76,11 @@ class _AuthScreenState extends State<AuthScreen> {
       } else if (e.code == 'invalid-credential') {
         message = "Недійсні облікові дані Google.";
       }
-      // Додайте інші коди помилок за потреби
       _showErrorSnackbar(message);
       print(
         "FirebaseAuthException під час входу через Google: ${e.code} - ${e.message}",
       );
     } catch (e) {
-      // Обробка інших помилок (наприклад, від google_sign_in)
       _showErrorSnackbar("Сталася помилка під час входу через Google: $e");
       print("Помилка під час входу через Google: $e");
     } finally {

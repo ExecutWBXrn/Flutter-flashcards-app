@@ -41,12 +41,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBdh5oIgl_uMJmjBtGIKHslo0KLi822p10',
-    appId: '1:409022677678:web:ce379497e00fd78d41633f',
-    messagingSenderId: '409022677678',
-    projectId: 'srs-flashcard-dp',
-    authDomain: 'srs-flashcard-dp.firebaseapp.com',
-    storageBucket: 'srs-flashcard-dp.firebasestorage.app',
+    apiKey: "AIzaSyBdh5oIgl_uMJmjBtGIKHslo0KLi822p10",
+    authDomain: "srs-flashcard-dp.firebaseapp.com",
+    projectId: "srs-flashcard-dp",
+    storageBucket: "srs-flashcard-dp.firebasestorage.app",
+    messagingSenderId: "409022677678",
+    appId: "1:409022677678:web:ce379497e00fd78d41633f",
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -76,11 +76,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBdh5oIgl_uMJmjBtGIKHslo0KLi822p10',
-    appId: '1:409022677678:web:a8c8daec2d848b0f41633f',
-    messagingSenderId: '409022677678',
-    projectId: 'srs-flashcard-dp',
-    authDomain: 'srs-flashcard-dp.firebaseapp.com',
-    storageBucket: 'srs-flashcard-dp.firebasestorage.app',
+    apiKey: "AIzaSyBdh5oIgl_uMJmjBtGIKHslo0KLi822p10",
+    authDomain: "srs-flashcard-dp.firebaseapp.com",
+    projectId: "srs-flashcard-dp",
+    storageBucket: "srs-flashcard-dp.firebasestorage.app",
+    messagingSenderId: "409022677678",
+    appId: "1:409022677678:web:a8c8daec2d848b0f41633f",
   );
 }

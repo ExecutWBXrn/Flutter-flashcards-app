@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class Deck {
   final String id;
@@ -11,7 +13,6 @@ class Deck {
   final String? languageTo;
   final int cardCount;
   final String? parentId;
-  final int depth;
 
   bool get isTopLevel => parentId == null;
 
@@ -26,7 +27,6 @@ class Deck {
     this.languageTo,
     this.cardCount = 0,
     this.parentId,
-    this.depth = 0,
   });
 
   factory Deck.fromFirestore(
@@ -45,7 +45,6 @@ class Deck {
       languageTo: data?['languageTo'],
       cardCount: data?['cardCount'] ?? 0,
       parentId: data?['parentId'],
-      depth: data?['depth'] ?? 0,
     );
   }
 
@@ -60,7 +59,6 @@ class Deck {
       if (languageTo != null) 'languageTo': languageTo,
       'cardCount': cardCount,
       if (parentId != null) 'parentId': parentId,
-      'depth': depth,
     };
   }
 
@@ -82,5 +80,104 @@ class Deck {
       updatedAt: updatedAt ?? this.updatedAt,
       cardCount: cardCount ?? this.cardCount,
     );
+  }
+}
+
+class DeckService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> deleteDeckHierarchically(String deckId) async {
+    final User? user = _auth.currentUser;
+    if (user == null) {
+      throw Exception("Користувач не авторизований.");
+    }
+
+    List<String> decksToDelete = [];
+    List<String> cardsToDelete = [];
+
+    await _collectDecksAndCardsForDeletion(
+      deckId,
+      user.uid,
+      decksToDelete,
+      cardsToDelete,
+    );
+
+    if (decksToDelete.isEmpty) {
+      print(
+        "Не знайдено колод для видалення (можливо, лише початкова колода).",
+      );
+    }
+
+    print("Колоди до видалення: $decksToDelete");
+    print("Картки до видалення: $cardsToDelete");
+
+    if (cardsToDelete.isNotEmpty) {
+      WriteBatch cardBatch = _firestore.batch();
+      for (String cardId in cardsToDelete) {
+        cardBatch.delete(_firestore.collection('flashcards').doc(cardId));
+      }
+      try {
+        await cardBatch.commit();
+        print("Картки успішно видалено.");
+      } catch (e) {
+        print("Помилка під час видалення карток: $e");
+      }
+    }
+
+    if (decksToDelete.isNotEmpty) {
+      WriteBatch deckBatch = _firestore.batch();
+      for (String id in decksToDelete) {
+        deckBatch.delete(_firestore.collection('decks').doc(id));
+      }
+      try {
+        await deckBatch.commit();
+        print("Колоди успішно видалено.");
+      } catch (e) {
+        print("Помилка під час видалення колод: $e");
+      }
+    }
+  }
+
+  Future<void> _collectDecksAndCardsForDeletion(
+    String currentDeckId,
+    String userId,
+    List<String> decksToDelete,
+    List<String> cardsToDelete,
+  ) async {
+    if (!decksToDelete.contains(currentDeckId)) {
+      decksToDelete.add(currentDeckId);
+    }
+
+    final cardsSnapshot =
+        await _firestore
+            .collection('flashcards')
+            .where('userId', isEqualTo: userId)
+            .where('deckId', isEqualTo: currentDeckId)
+            .get();
+
+    for (var doc in cardsSnapshot.docs) {
+      if (!cardsToDelete.contains(doc.id)) {
+        cardsToDelete.add(doc.id);
+      }
+    }
+
+    final childrenDecksSnapshot =
+        await _firestore
+            .collection('decks')
+            .where('userId', isEqualTo: userId)
+            .where('parentId', isEqualTo: currentDeckId)
+            .get();
+
+    for (var doc in childrenDecksSnapshot.docs) {
+      if (!decksToDelete.contains(doc.id)) {
+        await _collectDecksAndCardsForDeletion(
+          doc.id,
+          userId,
+          decksToDelete,
+          cardsToDelete,
+        );
+      }
+    }
   }
 }

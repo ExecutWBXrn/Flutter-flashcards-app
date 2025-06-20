@@ -38,8 +38,35 @@ dependencies:
   cloud_firestore: ^5.6.8
   shared_preferences: ^2.5.3
   google_sign_in: ^6.3.0
-
+  provider: ^6.1.5
   cupertino_icons: ^1.0.8
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
+
+
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/icon_dp.png"
+  web:
+    generate: true
+    image_path: "assets/images/icon_dp.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+    windows:
+      generate: true
+      image_path: "assets/images/icon_dp.png"
+      icon_size: 48 # min:48, max:256, default: 48
+    macos:
+      generate: true
+      image_path: "assets/images/icon_dp.png"
+
+flutter_native_splash:
+  color: "#4b4c3a"
+  image: assets/images/icon_dp.png
+  fullscreen: true
+
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +123,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+msix_config:
+  display_name: Execut Flashcards
+  publisher_display_name: ExecutWBXrn
+  identity_name: com.example.yourpackagename
+  msix_version: 1.0.0.0
+  logo_path: assets/images/icon_dp.png

@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:srsapplication/models/deck_model.dart';
 import 'package:srsapplication/screens/deck/deck_create.dart';
 import 'package:srsapplication/screens/card/cards_screen.dart';
+import 'package:srsapplication/screens/drawer/about.dart';
+import 'package:srsapplication/screens/drawer/settings.dart';
+import 'package:srsapplication/screens/drawer/info.dart';
+import 'package:srsapplication/themes/themes.dart';
+import 'package:srsapplication/screens/games/game.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DeckScreen extends StatefulWidget {
   final String? parentId;
   final String? parentDeckName;
+  final bool? toFrom;
 
-  const DeckScreen({super.key, this.parentId, this.parentDeckName});
+  const DeckScreen({
+    super.key,
+    this.parentId,
+    this.parentDeckName,
+    this.toFrom,
+  });
 
   @override
   State<StatefulWidget> createState() {
@@ -19,19 +32,44 @@ class DeckScreen extends StatefulWidget {
 
 enum MenuAction { edit, delete }
 
+enum GameAction { learn, repeat, repeat2 }
+
 class _DeckScreenState extends State<DeckScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _currentUser;
   Deck? _choosenDeck;
+  bool? _currentFrom;
 
   @override
   void initState() {
     super.initState();
     _currentUser = _auth.currentUser;
+    _currentFrom = widget.toFrom ?? true;
+    _initializeAsyncData();
     print(
       "[DeckScreen CONSTRUCTOR] parentId: ${widget.parentId}, parentDeckName: ${widget.parentDeckName}",
     );
+  }
+
+  Future<void> _initializeAsyncData() async {
+    await _loadData();
+    if (_currentFrom == true) {
+      await _saveData(true);
+    }
+  }
+
+  Future<void> _saveData(bool ToFrom) async {
+    final SharedPreferences pref = await SharedPreferences.getInstance();
+    await pref.setBool("toFrom", ToFrom);
+  }
+
+  Future<void> _loadData() async {
+    final SharedPreferences pref = await SharedPreferences.getInstance();
+    setState(() {
+      _currentFrom = pref.getBool("toFrom");
+      _currentFrom ??= true;
+    });
   }
 
   Stream<List<Deck>> _getUserDecksStream() {
@@ -98,16 +136,9 @@ class _DeckScreenState extends State<DeckScreen> {
     );
   }
 
-  Future<void> deleteDeckOnly(String deckId) async {
-    setState(() {
-      _choosenDeck = null;
-    });
-    try {
-      await FirebaseFirestore.instance.collection('decks').doc(deckId).delete();
-      print('Deck document $deckId deleted.');
-    } catch (e) {
-      print('Error deleting deck document $deckId: $e');
-    }
+  Future<void> deleteDeck(String deckId) async {
+    final deckService = DeckService();
+    await deckService.deleteDeckHierarchically(deckId);
   }
 
   Widget _buildBottomNavItem(
@@ -147,7 +178,7 @@ class _DeckScreenState extends State<DeckScreen> {
   @override
   Widget build(BuildContext context) {
     final User? currentUser = _auth.currentUser;
-
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('Колоди'),
@@ -176,7 +207,7 @@ class _DeckScreenState extends State<DeckScreen> {
                   ],
               onSelected: (MenuAction action) {
                 if (action == MenuAction.delete) {
-                  deleteDeckOnly(_choosenDeck!.id);
+                  deleteDeck(_choosenDeck!.id);
                 } else if (action == MenuAction.edit) {
                   Navigator.push(
                     context,
@@ -188,6 +219,25 @@ class _DeckScreenState extends State<DeckScreen> {
                   );
                 }
               },
+            )
+          else
+            Padding(
+              padding: EdgeInsets.only(right: 15),
+              child: Row(
+                children: [
+                  Text(_currentFrom! ? "M" : "S"),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _currentFrom = !_currentFrom!;
+                      });
+                      _saveData(_currentFrom!);
+                    },
+                    icon: Icon(Icons.compare_arrows),
+                  ),
+                  Text(_currentFrom! ? "S" : "M"),
+                ],
+              ),
             ),
         ],
       ),
@@ -199,7 +249,7 @@ class _DeckScreenState extends State<DeckScreen> {
               decoration: BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage(
-                    MediaQuery.of(context).platformBrightness == Brightness.dark
+                    themeProvider.isCurrentlyDark(context)
                         ? "assets/images/backgrounds/dark_header.png"
                         : "assets/images/backgrounds/white_header.png",
                   ),
@@ -214,13 +264,20 @@ class _DeckScreenState extends State<DeckScreen> {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: Text(
-                      _auth.currentUser?.email?[0].toUpperCase() ?? 'U',
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
+                    backgroundImage:
+                        (_auth.currentUser?.photoURL != null)
+                            ? NetworkImage(_auth.currentUser!.photoURL!)
+                            : null,
+                    child:
+                        (_auth.currentUser?.photoURL! == null)
+                            ? Text(
+                              _auth.currentUser?.email?[0].toUpperCase() ?? 'U',
+                              style: TextStyle(
+                                fontSize: 24,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            )
+                            : null,
                   ),
                   SizedBox(height: 8),
                   Text(
@@ -259,6 +316,10 @@ class _DeckScreenState extends State<DeckScreen> {
               title: const Text('Налаштування'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
               },
             ),
             ListTile(
@@ -266,6 +327,10 @@ class _DeckScreenState extends State<DeckScreen> {
               title: const Text('Статистика'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Info()),
+                );
               },
             ),
             const Divider(), // Розділювач
@@ -274,6 +339,10 @@ class _DeckScreenState extends State<DeckScreen> {
               title: const Text('Про додаток'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AboutPage()),
+                );
               },
             ),
             ListTile(
@@ -350,9 +419,77 @@ class _DeckScreenState extends State<DeckScreen> {
                       ),
                     ],
                   ),
-                  trailing: IconButton(
-                    onPressed: () {},
+                  trailing: PopupMenuButton<GameAction>(
                     icon: Icon(Icons.play_arrow, size: 40, color: Colors.green),
+                    itemBuilder:
+                        (BuildContext context) => <PopupMenuEntry<GameAction>>[
+                          const PopupMenuItem<GameAction>(
+                            value: GameAction.learn,
+                            child: ListTile(
+                              leading: Icon(Icons.task_alt),
+                              title: Text('Learn it'),
+                            ),
+                          ),
+                          const PopupMenuItem<GameAction>(
+                            value: GameAction.repeat,
+                            child: ListTile(
+                              leading: Icon(Icons.assignment_outlined),
+                              title: Text('Write it'),
+                            ),
+                          ),
+                          const PopupMenuItem<GameAction>(
+                            value: GameAction.repeat2,
+                            child: ListTile(
+                              leading: Icon(Icons.assignment_outlined),
+                              title: Text('Write it mode 2'),
+                            ),
+                          ),
+                        ],
+                    onSelected: (GameAction action) {
+                      if (deck.cardCount > 0) {
+                        if (action == GameAction.learn) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => GamePage(
+                                    deckId: deck.id,
+                                    gameMode: 0,
+                                    toFrom: _currentFrom ?? true,
+                                  ),
+                            ),
+                          );
+                        } else if (action == GameAction.repeat) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => GamePage(
+                                    deckId: deck.id,
+                                    gameMode: 1,
+                                    toFrom: _currentFrom ?? true,
+                                  ),
+                            ),
+                          );
+                        } else if (action == GameAction.repeat2) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => GamePage(
+                                    deckId: deck.id,
+                                    gameMode: 2,
+                                    toFrom: _currentFrom ?? true,
+                                  ),
+                            ),
+                          );
+                        }
+                      } else {
+                        _showErrorSnackbar(
+                          "Додайте картки в колоду для їхнього вивчення",
+                        );
+                      }
+                    },
                   ),
                   onLongPress: () {
                     setState(() {
