@@ -70,7 +70,7 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
     }
     if (_auth.currentUser == null) {
       if (mounted) {
-        showErrorSnackbar(context, 'Помилка: користувач не автентифікований.');
+        showErrorSnackbar(context, 'Error: user not authenticated');
       }
 
       return;
@@ -120,7 +120,7 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
 
         if (mounted) {
           if (mounted) {
-            showSuccessSnackbar(context, "Картку оновленно");
+            showSuccessSnackbar(context, "Card updated!");
           }
           Navigator.of(context).pop();
         }
@@ -157,14 +157,14 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
 
         if (mounted) {
           if (mounted) {
-            showSuccessSnackbar(context, 'Картку створено!');
+            showSuccessSnackbar(context, 'Card created!');
           }
           Navigator.of(context).pop();
         }
       }
     } catch (e) {
       if (mounted) {
-        showErrorSnackbar(context, "Помилка створення картки");
+        showErrorSnackbar(context, "Card creation error");
       }
     } finally {
       if (mounted) {
@@ -179,7 +179,7 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Редагувати картку' : 'Створити нову картку'),
+        title: Text(_isEditing ? 'Edit card' : 'Create new card'),
         actions: [
           if (_isLoading)
             const Padding(
@@ -192,7 +192,7 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveCard,
-              tooltip: 'Зберегти картку',
+              tooltip: 'Save card',
             ),
         ],
       ),
@@ -206,34 +206,32 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
               TextFormField(
                 controller: _wordFromController,
                 decoration: InputDecoration(
-                  labelText: 'Слово / Фраза (мова оригіналу)',
-                  hintText: 'Наприклад, "Hello"',
+                  labelText: 'Front side of card',
+                  hintText: 'For example, "Hello"',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Це поле не може бути порожнім.';
+                    return 'This field cannot be empty';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-
-              // Поле "Переклад"
               TextFormField(
                 controller: _wordToController,
                 decoration: InputDecoration(
-                  labelText: 'Переклад',
-                  hintText: 'Наприклад, "Привіт"',
+                  labelText: 'Back side of card',
+                  hintText: 'For example, "Привіт"',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Це поле не може бути порожнім.';
+                    return 'This field cannot be empty';
                   }
                   return null;
                 },
@@ -242,16 +240,14 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
               const Divider(),
               const SizedBox(height: 10),
               Text(
-                'Додаткова інформація (опціонально)',
+                'Additional information (optional)',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 16),
-
-              // Поле "Приклад речення (мова оригіналу)"
               TextFormField(
                 controller: _exampleFromController,
                 decoration: InputDecoration(
-                  labelText: 'Приклад речення (мова оригіналу)',
+                  labelText: 'Example sentence (front side of card)',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
@@ -260,12 +256,10 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
                 maxLines: 2,
               ),
               const SizedBox(height: 16),
-
-              // Поле "Переклад прикладу речення"
               TextFormField(
                 controller: _exampleToController,
                 decoration: InputDecoration(
-                  labelText: 'Переклад прикладу речення',
+                  labelText: 'Example sentence (back side of card)',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
@@ -274,12 +268,10 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
                 maxLines: 2,
               ),
               const SizedBox(height: 16),
-
-              // Поле "Транскрипція"
               TextFormField(
                 controller: _transcriptionController,
                 decoration: InputDecoration(
-                  labelText: 'Транскрипція',
+                  labelText: 'Transcription',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),
@@ -300,7 +292,7 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
                           ),
                         )
                         : const Icon(Icons.save),
-                label: Text(_isEditing ? 'Оновити картку' : 'Створити картку'),
+                label: Text(_isEditing ? 'Update card' : 'Create card'),
                 onPressed: _isLoading ? null : _saveCard,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12.0),

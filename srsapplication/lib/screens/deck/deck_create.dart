@@ -58,10 +58,7 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
       final User? currentUser = _auth.currentUser;
       if (currentUser == null) {
         if (mounted) {
-          showErrorSnackbar(
-            context,
-            'Помилка: користувач не автентифікований.',
-          );
+          showErrorSnackbar(context, 'Error: user is not authenticated');
         }
         setState(() {
           _isLoading = false;
@@ -90,14 +87,14 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
               .doc(widget.deckToEdit!.id)
               .update(deckData);
           if (mounted) {
-            showSuccessSnackbar(context, 'Колоду успішно оновлено!');
+            showSuccessSnackbar(context, 'Deck updated successfully!');
           }
         } else {
           deckData['createdAt'] = now;
           deckData['cardCount'] = 0;
           await _firestore.collection('decks').add(deckData);
           if (mounted) {
-            showSuccessSnackbar(context, 'Колоду успішно створено!');
+            showSuccessSnackbar(context, 'Deck created successfully!');
           }
         }
         Navigator.pop(context);
@@ -106,7 +103,7 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
         if (mounted) {
           showErrorSnackbar(
             context,
-            'Не вдалося зберегти колоду. Сталась невідома помилка',
+            'Failed to save the deck. An unknown error occurred',
           );
         }
       } finally {
@@ -123,7 +120,7 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Редагувати колоду' : 'Створити нову колоду'),
+        title: Text(_isEditing ? 'Edit deck' : 'Create new deck'),
         actions: [
           if (_isLoading)
             const Padding(
@@ -143,7 +140,7 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveDeck,
-              tooltip: 'Зберегти',
+              tooltip: 'Save',
             ),
         ],
       ),
@@ -157,13 +154,13 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Назва колоди *',
-                  hintText: 'Наприклад, "English B2 adverbs"',
+                  labelText: 'Deck name *',
+                  hintText: 'e.g., "English B2 adverbs"',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Назва не може бути порожньою';
+                    return 'Name cannot be empty';
                   }
                   return null;
                 },
@@ -172,20 +169,20 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
-                  labelText: 'Опис (необов\'язково)',
-                  hintText: 'Короткий опис вмісту колоди',
+                  labelText: 'Description (optional)',
+                  hintText: "A short description of the deck's content",
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
               ),
               const SizedBox(height: 24.0),
               Text(
-                'Мова оригіналу (From):',
+                'Original language (From):',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               DropdownButton<String>(
                 value: _selectedLanguageFrom,
-                hint: const Text('Виберіть мову'),
+                hint: const Text('Select a language'),
                 isExpanded: true,
                 items:
                     <String>['en', 'de', 'es', 'fr', 'it', 'uk', 'pl'].map((
@@ -204,12 +201,12 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
               ),
               const SizedBox(height: 16.0),
               Text(
-                'Мова перекладу (To):',
+                'Translation language (To):',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               DropdownButton<String>(
                 value: _selectedLanguageTo,
-                hint: const Text('Виберіть мову'),
+                hint: const Text('Select a language'),
                 isExpanded: true,
                 items:
                     <String>['en', 'de', 'es', 'fr', 'it', 'uk', 'pl'].map((
@@ -229,7 +226,7 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
               const SizedBox(height: 32.0),
               ElevatedButton.icon(
                 icon: const Icon(Icons.save_alt_rounded),
-                label: Text(_isLoading ? 'Збереження...' : 'Зберегти колоду'),
+                label: Text(_isLoading ? 'Saving...' : 'Save deck'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   textStyle: const TextStyle(

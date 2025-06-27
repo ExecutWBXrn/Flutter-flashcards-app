@@ -160,7 +160,7 @@ class _cardListScreenState extends State<CardListScreen> {
       if (mounted) {
         showErrorSnackbar(
           context,
-          "Спочатку виберіть або створіть колоду для додавання картки.",
+          "First select or create a deck to add a card",
         );
       }
 
@@ -205,7 +205,7 @@ class _cardListScreenState extends State<CardListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Картки'),
+        title: Text('Flashcards'),
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
@@ -263,7 +263,7 @@ class _cardListScreenState extends State<CardListScreen> {
               padding: EdgeInsets.only(right: 15),
               child: Row(
                 children: [
-                  Text(_currentFrom ?? true ? "M" : "S"),
+                  Text(_currentFrom ?? true ? "F" : "B"),
                   IconButton(
                     onPressed: () {
                       bool currentValue = _currentFrom ?? true;
@@ -274,7 +274,7 @@ class _cardListScreenState extends State<CardListScreen> {
                     },
                     icon: Icon(Icons.compare_arrows),
                   ),
-                  Text(_currentFrom ?? true ? "S" : "M"),
+                  Text(_currentFrom ?? true ? "B" : "F"),
                 ],
               ),
             ),
@@ -327,7 +327,7 @@ class _cardListScreenState extends State<CardListScreen> {
                             Padding(
                               padding: EdgeInsets.only(top: 4),
                               child: Text(
-                                "Карток: ${deck.cardCount}",
+                                "Cards: ${deck.cardCount}",
                                 style: TextStyle(color: Colors.grey.shade600),
                               ),
                             ),
@@ -433,7 +433,7 @@ class _cardListScreenState extends State<CardListScreen> {
                                   if (mounted) {
                                     showErrorSnackbar(
                                       context,
-                                      "Додайте картки в колоду для їхнього вивчення",
+                                      "Add cards to the deck to study them",
                                     );
                                   }
                                 }
@@ -471,9 +471,7 @@ class _cardListScreenState extends State<CardListScreen> {
                 if (cardSnapshot.hasError) {
                   return SliverToBoxAdapter(
                     child: Center(
-                      child: Text(
-                        'Помилка завантаження карток: ${cardSnapshot.error}',
-                      ),
+                      child: Text('Error loading cards: ${cardSnapshot.error}'),
                     ),
                   );
                 }
@@ -482,7 +480,7 @@ class _cardListScreenState extends State<CardListScreen> {
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.all(16.0),
-                        child: Text('У цій колоді ще немає карток.'),
+                        child: Text('This deck has no cards yet'),
                       ),
                     ),
                   );
@@ -553,12 +551,12 @@ class _cardListScreenState extends State<CardListScreen> {
           children: [
             _buildBottomNavItem(
               Icons.create_new_folder,
-              'Створити колоду',
+              'Create deck',
               _navigateToCreateDeckScreen,
             ),
             _buildBottomNavItem(
               Icons.add,
-              'Додати картку',
+              'Add card',
               _navigateToCreateCardScreen,
             ),
           ],

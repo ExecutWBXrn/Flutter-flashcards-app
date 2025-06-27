@@ -146,7 +146,7 @@ class _DeckScreenState extends State<DeckScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Колоди'),
+        title: Text('Decks'),
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
@@ -190,7 +190,7 @@ class _DeckScreenState extends State<DeckScreen> {
               padding: EdgeInsets.only(right: 15),
               child: Row(
                 children: [
-                  Text(_currentFrom! ? "M" : "S"),
+                  Text(_currentFrom! ? "F" : "B"),
                   IconButton(
                     onPressed: () {
                       setState(() {
@@ -200,7 +200,7 @@ class _DeckScreenState extends State<DeckScreen> {
                     },
                     icon: Icon(Icons.compare_arrows),
                   ),
-                  Text(_currentFrom! ? "S" : "M"),
+                  Text(_currentFrom! ? "B" : "F"),
                 ],
               ),
             ),
@@ -248,7 +248,7 @@ class _DeckScreenState extends State<DeckScreen> {
                   Text(
                     _auth.currentUser?.displayName ??
                         _auth.currentUser?.email ??
-                        'Користувач',
+                        'User',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontSize: 16,
@@ -268,7 +268,7 @@ class _DeckScreenState extends State<DeckScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.home),
-              title: const Text('Головна'),
+              title: const Text('Home'),
               splashColor: Theme.of(
                 context,
               ).colorScheme.primary.withOpacity(0.1),
@@ -278,7 +278,7 @@ class _DeckScreenState extends State<DeckScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.settings),
-              title: const Text('Налаштування'),
+              title: const Text('Settings'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -289,7 +289,7 @@ class _DeckScreenState extends State<DeckScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.line_axis),
-              title: const Text('Статистика'),
+              title: const Text('Statistics'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -301,7 +301,7 @@ class _DeckScreenState extends State<DeckScreen> {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
-              title: const Text('Вийти'),
+              title: const Text('Log out'),
               onTap: () async {
                 Navigator.pop(context);
                 await _auth.signOut();
@@ -318,18 +318,18 @@ class _DeckScreenState extends State<DeckScreen> {
           }
           if (snapshot.hasError) {
             print("Помилка завантаження колод: ${snapshot.error}");
-            return const Center(child: Text('Не вдалося завантажити колоди.'));
+            return const Center(child: Text('Failed to load decks'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('У вас ще немає жодної колоди.'),
+                  const Text('You don\'t have any decks yet'),
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: _navigateToCreateDeckScreen,
-                    child: const Text('Створити першу колоду'),
+                    child: const Text('Create your first deck'),
                   ),
                 ],
               ),
@@ -367,7 +367,7 @@ class _DeckScreenState extends State<DeckScreen> {
                       Padding(
                         padding: EdgeInsets.only(top: 4),
                         child: Text(
-                          "Карток: ${deck.cardCount}",
+                          "Cards: ${deck.cardCount}",
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                       ),
@@ -466,7 +466,7 @@ class _DeckScreenState extends State<DeckScreen> {
                             if (mounted) {
                               showErrorSnackbar(
                                 context,
-                                "Додайте картки в колоду для їхнього вивчення",
+                                "Add cards to the deck to study them",
                               );
                             }
                           }
@@ -496,15 +496,12 @@ class _DeckScreenState extends State<DeckScreen> {
           children: [
             _buildBottomNavItem(
               Icons.create_new_folder,
-              'Створити колоду',
+              'Create deck',
               _navigateToCreateDeckScreen,
             ),
-            _buildBottomNavItem(Icons.add, 'Додати картку', () {
+            _buildBottomNavItem(Icons.add, 'Add card', () {
               if (mounted) {
-                showErrorSnackbar(
-                  context,
-                  "Виберіть колоду для додавання картки",
-                );
+                showErrorSnackbar(context, "Select a deck to add a card");
               }
             }),
           ],

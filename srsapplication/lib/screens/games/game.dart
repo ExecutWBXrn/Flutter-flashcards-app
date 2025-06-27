@@ -144,7 +144,7 @@ class _game1 extends State<GamePage> {
         return KeyEventResult.handled;
       }
     }
-    return KeyEventResult.ignored; // Для інших клавіш
+    return KeyEventResult.ignored;
   }
 
   void _checkOrGoNext({bool isCorrect = false}) {
@@ -165,10 +165,10 @@ class _game1 extends State<GamePage> {
               : currentCard.wordTo.trim().toLowerCase());
       setState(() {
         if (correct || isCorrect) {
-          print("Правильно!");
+          print("Correct!");
           if (!isCorrect) {
             if (mounted) {
-              showSuccessSnackbar(context, "Правильно!");
+              showSuccessSnackbar(context, "Correct!");
             }
           }
           _updateCardReview(currentCard, true);
@@ -180,7 +180,7 @@ class _game1 extends State<GamePage> {
             if (mounted) {
               showErrorSnackbar(
                 context,
-                "Неправильно! Правильна відповідь: ${widget.toFrom ? currentCard.wordFrom : currentCard.wordTo}",
+                "Incorrect! Correct answer: ${widget.toFrom ? currentCard.wordFrom : currentCard.wordTo}",
               );
             }
           }
@@ -200,16 +200,14 @@ class _game1 extends State<GamePage> {
   }
 
   void _goToNextCard() {
-    print("gTNC");
     if (_currentCards.isEmpty) return;
-    print("gTNC2");
     setState(() {
       if (_currentIndex < _currentCards.length - 1) {
         _currentIndex++;
       } else {
         _currentIndex = 0;
         if (mounted) {
-          showSuccessSnackbar(context, "Всі картки переглянуто!");
+          showSuccessSnackbar(context, "You've viewed all the cards!");
         }
         Navigator.pop(context);
       }
@@ -228,12 +226,11 @@ class _game1 extends State<GamePage> {
       child: Focus(
         focusNode: _pageFocusNode,
         onKeyEvent: _handleKeyEvent,
-        autofocus: true,
         child: Scaffold(
           appBar: AppBar(
             title: Column(
               children: [
-                Text("Введи це"),
+                Text("Enter it"),
                 _lenght != 0
                     ? Text(
                       "${_currentIndex < _lenght ? _currentIndex : _lenght}/$_lenght",
@@ -261,16 +258,14 @@ class _game1 extends State<GamePage> {
                       if (Navigator.canPop(context)) {
                         Navigator.pop(context);
                         if (mounted) {
-                          showErrorSnackbar(context, "Сталась помилка");
+                          showErrorSnackbar(context, "Error occurred");
                         }
                       }
                     }
                   });
                 }
 
-                return Center(
-                  child: Text('Помилка завантаження карток: ${snapshot.error}'),
-                );
+                return Center(child: Text('Error loading cards'));
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 _currentCards = [];
@@ -282,10 +277,7 @@ class _game1 extends State<GamePage> {
                       if (Navigator.canPop(context)) {
                         Navigator.pop(context);
                         if (mounted) {
-                          showErrorSnackbar(
-                            context,
-                            "Немає карт для повторення",
-                          );
+                          showErrorSnackbar(context, "No cards to review");
                         }
                       }
                     }
@@ -295,7 +287,7 @@ class _game1 extends State<GamePage> {
                 return Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Text('У цій колоді ще немає карток.'),
+                    child: Text('There are no cards in this deck yet'),
                   ),
                 );
               }
@@ -315,7 +307,9 @@ class _game1 extends State<GamePage> {
                 return Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Text('У цій колоді ще немає карток (оновлено).'),
+                    child: Text(
+                      'There are still no cards in this deck (updated).',
+                    ),
                   ),
                 );
               }
@@ -397,7 +391,7 @@ class _game1 extends State<GamePage> {
                             child: TextField(
                               controller: _translationController,
                               decoration: InputDecoration(
-                                hintText: "Введи переклад тут",
+                                hintText: "Enter here",
                               ),
                               enabled: !_showAnswer,
                               autofocus: true,
@@ -442,7 +436,7 @@ class _game1 extends State<GamePage> {
                                               )
                                               : _toggleShowAnswer,
                                       child: Text(
-                                        _showAnswer ? "Вірно" : "Показати",
+                                        _showAnswer ? "Correct" : "Show",
                                       ),
                                     ),
                                   ),
@@ -462,7 +456,7 @@ class _game1 extends State<GamePage> {
                                       ),
                                       onPressed: _checkOrGoNext,
                                       child: Text(
-                                        _showAnswer ? "Повторити" : "Далі",
+                                        _showAnswer ? "Repeat" : "Next",
                                       ),
                                     ),
                                   ),

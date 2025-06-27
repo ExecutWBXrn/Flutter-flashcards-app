@@ -20,16 +20,13 @@ class _resetPasswordPage extends State<ResPass> {
   Future<void> _resetPasswordRequest(String email) async {
     if (email.trim().isEmpty) {
       if (mounted) {
-        showErrorSnackbar(context, "Поле email не може бути порожнім");
+        showErrorSnackbar(context, "Email field cannot be empty");
       }
 
       return;
     } else if (!email.trim().contains("@") || !email.trim().contains(".")) {
       if (mounted) {
-        showErrorSnackbar(
-          context,
-          "Будь ласка, введіть коректну email адресу.",
-        );
+        showErrorSnackbar(context, "Please enter a valid email address");
       }
 
       return;
@@ -44,7 +41,7 @@ class _resetPasswordPage extends State<ResPass> {
       if (mounted) {
         showSuccessSnackbar(
           context,
-          "Email для відновлення пароля було надіслано на електронну адресу",
+          "A password reset email has been sent to your email address",
         );
       }
 
@@ -52,11 +49,11 @@ class _resetPasswordPage extends State<ResPass> {
         Navigator.of(context).pop();
       }
     } on FirebaseAuthException catch (e) {
-      String message = "Не вдалося надіслати лист для скидання пароля.";
+      String message = "Failed to send password reset email";
       if (e.code == 'user-not-found') {
-        message = "Користувача з таким email не знайдено.";
+        message = "No user found with this email";
       } else if (e.code == 'invalid-email') {
-        message = "Вказано некоректну email адресу.";
+        message = "Invalid email address provided";
       }
       if (mounted) {
         showErrorSnackbar(context, message);
@@ -69,7 +66,7 @@ class _resetPasswordPage extends State<ResPass> {
       if (mounted) {
         showErrorSnackbar(
           context,
-          "Сталась невідома помилка. Спробуйте пізніше.",
+          "An unknown error occurred. Please try again later.",
         );
       }
     } finally {
@@ -84,7 +81,7 @@ class _resetPasswordPage extends State<ResPass> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: Text("Cкинути пароль")),
+      appBar: AppBar(centerTitle: true, title: Text("Reset Password")),
       body: Center(
         child: Form(
           key: _formKey,
@@ -102,7 +99,7 @@ class _resetPasswordPage extends State<ResPass> {
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: "Email",
-                    helperText: "Введіть Email для скидання пароля",
+                    helperText: "Enter your email to reset your password",
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -114,7 +111,7 @@ class _resetPasswordPage extends State<ResPass> {
                     onPressed: () {
                       _resetPasswordRequest(_emailController.text.trim());
                     },
-                    child: Text("Cкинути пароль"),
+                    child: Text("Reset password"),
                   ),
               ],
             ),

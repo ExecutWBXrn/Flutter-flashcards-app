@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
-import '../../func/card_deck/func.dart';
 import '../../func/messages/snackbars.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -72,12 +70,12 @@ class _AuthScreenState extends State<AuthScreen> {
         credential,
       );
     } on FirebaseAuthException catch (e) {
-      String message = "Помилка входу через Google. Спробуйте пізніше.";
+      String message = "Error signing in with Google. Please try again later.";
       if (e.code == 'account-exists-with-different-credential') {
         message =
-            "Акаунт вже існує з іншим методом входу. Спробуйте увійти цим методом.";
+            "An account already exists with a different sign-in method. Try signing in with that method.";
       } else if (e.code == 'invalid-credential') {
-        message = "Недійсні облікові дані Google.";
+        message = "Invalid Google credentials.";
       }
       if (mounted) {
         showErrorSnackbar(context, message);
@@ -87,10 +85,7 @@ class _AuthScreenState extends State<AuthScreen> {
       );
     } catch (e) {
       if (mounted) {
-        showErrorSnackbar(
-          context,
-          "Сталася помилка під час входу через Google",
-        );
+        showErrorSnackbar(context, "An error occurred during Google sign-in");
       }
       print("Помилка під час входу через Google: $e");
     } finally {
@@ -128,7 +123,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         showErrorSnackbar(
           context,
-          "Неможливо відправити лист: користувач не увійшов.",
+          "Unable to send email: user is not signed in",
         );
       }
 
@@ -136,7 +131,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
     if (currentUser.emailVerified) {
       if (mounted) {
-        showErrorSnackbar(context, "Ваш email вже підтверджено.");
+        showErrorSnackbar(context, "Your email is already verified");
       }
 
       setState(() {
@@ -150,9 +145,7 @@ class _AuthScreenState extends State<AuthScreen> {
       print("Verification email resent to ${currentUser.email}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            "Лист для підтвердження повторно відправлено на ${currentUser.email}",
-          ),
+          content: Text("Verification email resent to ${currentUser.email}"),
           backgroundColor: Colors.green,
         ),
       );
@@ -162,7 +155,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         showErrorSnackbar(
           context,
-          "Не вдалось повторно відправити лист. Спробуйте пізніше.",
+          "Failed to resend verification email. Please try again later.",
         );
       }
     }
@@ -177,7 +170,7 @@ class _AuthScreenState extends State<AuthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "Лист для підтвердження відправлено на ${userCredential.user!.email}",
+            "Verification email sent to ${userCredential.user!.email}",
           ),
           backgroundColor: Colors.green,
         ),
@@ -192,7 +185,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         showErrorSnackbar(
           context,
-          "Не вдалось відправити лист для підтвердження. Спробуйте пізніше.",
+          "Failed to send verification email. Please try again later.",
         );
       }
     }
@@ -221,7 +214,7 @@ class _AuthScreenState extends State<AuthScreen> {
           if (mounted) {
             showErrorSnackbar(
               context,
-              "Ваш email ще не підтверджено. Будь ласка, перевірте свою пошту.",
+              "Your email is not yet verified. Please check your inbox.",
             );
           }
           setState(() {
@@ -244,15 +237,15 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Сталась помилка';
+      String message = 'An error occurred';
       if (e.message != null) {
         message = e.message!;
       } else if (e.code == 'user-not-found') {
-        message = 'користувача з таким email не знайдено';
+        message = 'No user found with this email';
       } else if (e.code == 'wrong-password') {
-        message = 'Неправильний пароль.';
+        message = 'Incorrect password';
       } else if (e.code == 'email-already-in-use') {
-        message = 'Цей email вже використовується іншим акаунтом.';
+        message = 'This email is already in use by another account';
       }
       if (mounted) {
         showErrorSnackbar(context, message);
@@ -260,7 +253,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } catch (e) {
       print(e);
       if (mounted) {
-        showErrorSnackbar(context, "Невідома помилка. Спробуйте ще раз.");
+        showErrorSnackbar(context, "Unknown error. Please try again.");
       }
     } finally {
       if (mounted) {
@@ -275,7 +268,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isLoginMode ? 'Вхід' : 'Реєстрація'),
+        title: Text(_isLoginMode ? 'Login' : 'Register'),
         centerTitle: true,
       ),
       body: Center(
@@ -305,7 +298,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   key: ValueKey('password'),
                   keyboardType: TextInputType.visiblePassword,
                   decoration: InputDecoration(
-                    labelText: 'Пароль',
+                    labelText: 'Password',
                     suffixIcon: IconButton(
                       onPressed: () {
                         setState(() {
@@ -333,8 +326,8 @@ class _AuthScreenState extends State<AuthScreen> {
                               : _sendVerificationEmailAgain,
                       child: Text(
                         _isResendButtonDisabled
-                            ? 'Повторно відправити лист через: $_countdownSeconds'
-                            : 'Відправити лист повторно',
+                            ? 'Resend email in: $_countdownSeconds'
+                            : 'Resend verification email',
                       ),
                     ),
                   )
@@ -345,7 +338,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       onPressed: () {
                         Navigator.pushNamed(context, '/resetPassword');
                       },
-                      child: Text("Забули пароль ?"),
+                      child: Text("Forgot password ?"),
                     ),
                   ),
                 SizedBox(height: 20),
@@ -354,7 +347,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 else
                   ElevatedButton(
                     onPressed: _submitAuthForm,
-                    child: Text(_isLoginMode ? 'Увійти' : 'Зареєструватися'),
+                    child: Text(_isLoginMode ? 'Sign In' : 'Sign Up'),
                   ),
                 const SizedBox(height: 12),
 
@@ -368,8 +361,8 @@ class _AuthScreenState extends State<AuthScreen> {
                     },
                     child: Text(
                       _isLoginMode
-                          ? 'Створити новий акаунт'
-                          : 'Я вже маю акаунт',
+                          ? 'Create a new account'
+                          : 'I already have an account',
                     ),
                   ),
                 SizedBox(height: 12),
@@ -380,7 +373,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   onPressed: _signInWithGoogle,
                   label: const Text(
-                    "Увійти через Google",
+                    "Sign in with Google",
                     style: TextStyle(fontSize: 18),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -405,18 +398,18 @@ class _AuthScreenState extends State<AuthScreen> {
 
   String? _email_validator(String? v) {
     if (v == null || v.trim().isEmpty) {
-      return 'Поле email не може бути порожнім';
+      return 'Email field cannot be empty';
     } else if (!v.trim().contains("@")) {
-      return 'email повинен містити \'@\' символ';
+      return 'Email must contain \'@\' symbol';
     }
     return null;
   }
 
   String? _password_validator(String? v) {
     if (v == null || v.trim().isEmpty) {
-      return 'Поле з паролем не може бути порожнім';
+      return 'Password field cannot be empty';
     } else if (v.trim().length < 6) {
-      return 'Пароль повинен містити що найменше 6 символів';
+      return 'Password must be at least 6 characters long';
     }
     return null;
   }

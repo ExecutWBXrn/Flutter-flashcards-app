@@ -99,7 +99,7 @@ class Info extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: Text("Статистика")),
+      appBar: AppBar(centerTitle: true, title: Text("Statistics")),
       body: CustomScrollView(
         slivers: [
           StreamBuilder(
@@ -113,7 +113,7 @@ class Info extends StatelessWidget {
 
               if (snapshot.hasError) {
                 return const SliverToBoxAdapter(
-                  child: Center(child: Text('Помилка завантаження Колоди!')),
+                  child: Center(child: Text('Error loading decks!')),
                 );
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -121,7 +121,7 @@ class Info extends StatelessWidget {
                   child: Center(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
-                      child: Text('У цій колоді ще немає карток.'),
+                      child: Text('There are no cards in this deck yet'),
                     ),
                   ),
                 );
@@ -136,7 +136,7 @@ class Info extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Колоди",
+                        "Decks",
                         style: TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.bold,
@@ -144,17 +144,17 @@ class Info extends StatelessWidget {
                         textAlign: TextAlign.start,
                       ),
                       SizedBox(height: 15),
-                      Text("Кількість колод: ${data?.length}."),
+                      Text("Number of decks: ${data?.length}."),
                       SizedBox(height: 15),
                       Text(
-                        "Картки",
+                        "Cards",
                         style: TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 15),
-                      Text("Загальна кількість карток: ${_cardCount(data!)}."),
+                      Text("Total number of cards: ${_cardCount(data!)}."),
                     ],
                   ),
                 ),
@@ -173,7 +173,7 @@ class Info extends StatelessWidget {
               if (snapshot.hasError) {
                 print("Snap err: ${snapshot.error}");
                 return const SliverToBoxAdapter(
-                  child: Center(child: Text('Помилка завантаження карток!')),
+                  child: Center(child: Text('Error loading cards!')),
                 );
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -181,7 +181,7 @@ class Info extends StatelessWidget {
                   child: Center(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
-                      child: Text('У цій колоді ще немає карток.'),
+                      child: Text('There are no cards in this deck yet.'),
                     ),
                   ),
                 );
@@ -197,17 +197,11 @@ class Info extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "Картки у процесі вивчення: ${cardData['cardCount']}.",
-                      ),
-                      Text("Карток вивчено: ${cardData['cardStudied']}."),
-                      Text(
-                        "Найбільш правильнних введень (${cardData['correct']}):",
-                      ),
+                      Text("Cards in progress: ${cardData['cardCount']}."),
+                      Text("Cards learned: ${cardData['cardStudied']}."),
+                      Text("Most correct answers (${cardData['correct']}):"),
                       Text(cardData['correctText']),
-                      Text(
-                        "Найменш правильнних введень (${cardData['incorrect']}):",
-                      ),
+                      Text("Least correct answers (${cardData['incorrect']}):"),
                       Text(cardData['incorrectText']),
                     ],
                   ),

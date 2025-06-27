@@ -10,18 +10,18 @@ class SettingsPage extends StatelessWidget {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return Scaffold(
-          appBar: AppBar(title: Text('Налаштування'), centerTitle: true),
+          appBar: AppBar(title: Text('Settings'), centerTitle: true),
           body: ListView(
             children: <Widget>[
               Center(
                 child: Text(
-                  "Тема",
+                  "Theme",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
                 ),
               ),
               RadioListTile<ThemeMode>(
-                title: const Text('Системна тема'),
-                subtitle: const Text('Використовувати налаштування пристрою'),
+                title: const Text('System theme'),
+                subtitle: const Text('Use device settings'),
                 value: ThemeMode.system,
                 groupValue: themeProvider.themeMode,
                 onChanged: (ThemeMode? value) {
@@ -31,7 +31,7 @@ class SettingsPage extends StatelessWidget {
                 },
               ),
               RadioListTile<ThemeMode>(
-                title: const Text('Світла тема'),
+                title: const Text('Light theme'),
                 value: ThemeMode.light,
                 groupValue: themeProvider.themeMode,
                 onChanged: (ThemeMode? value) {
@@ -41,7 +41,7 @@ class SettingsPage extends StatelessWidget {
                 },
               ),
               RadioListTile<ThemeMode>(
-                title: const Text('Темна тема'),
+                title: const Text('Dark theme'),
                 value: ThemeMode.dark,
                 groupValue: themeProvider.themeMode,
                 onChanged: (ThemeMode? value) {
@@ -52,9 +52,9 @@ class SettingsPage extends StatelessWidget {
               ),
               const Divider(),
               ListTile(
-                title: const Text('Поточний активний стиль:'),
+                title: const Text('Current active style:'),
                 trailing: Text(
-                  themeProvider.isCurrentlyDark(context) ? 'Темний' : 'Світлий',
+                  themeProvider.isCurrentlyDark(context) ? 'Dark' : 'Light',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
