@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:srsapplication/models/card_model.dart';
 import '../../func/messages/snackbars.dart';
+import 'package:flutter/services.dart';
 
 class GamePage extends StatefulWidget {
   String deckId;
@@ -27,6 +28,8 @@ class _game1 extends State<GamePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final TextEditingController _translationController = TextEditingController();
+
+  final FocusNode _pageFocusNode = FocusNode();
 
   List<FlashCard> _currentCards = [];
   int _currentIndex = 0;
@@ -123,6 +126,7 @@ class _game1 extends State<GamePage> {
   @override
   void dispose() {
     _translationController.dispose();
+    _pageFocusNode.dispose();
     super.dispose();
   }
 
@@ -130,6 +134,17 @@ class _game1 extends State<GamePage> {
     setState(() {
       _showAnswer = true;
     });
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        _checkOrGoNext();
+
+        return KeyEventResult.handled;
+      }
+    }
+    return KeyEventResult.ignored; // Для інших клавіш
   }
 
   void _checkOrGoNext({bool isCorrect = false}) {
@@ -206,234 +221,264 @@ class _game1 extends State<GamePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          children: [
-            Text("Введи це"),
-            _lenght != 0
-                ? Text(
-                  "${_currentIndex < _lenght ? _currentIndex : _lenght}/$_lenght",
-                  style: TextStyle(fontWeight: FontWeight.w300, fontSize: 15),
-                )
-                : Text(""),
-          ],
-        ),
-        centerTitle: true,
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-      body: StreamBuilder(
-        stream: _getCardsForCurrentDeckStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            if (widget.gameMode == 0) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).requestFocus(_pageFocusNode);
+      },
+      child: Focus(
+        focusNode: _pageFocusNode,
+        onKeyEvent: _handleKeyEvent,
+        autofocus: true,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Column(
+              children: [
+                Text("Введи це"),
+                _lenght != 0
+                    ? Text(
+                      "${_currentIndex < _lenght ? _currentIndex : _lenght}/$_lenght",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w300,
+                        fontSize: 15,
+                      ),
+                    )
+                    : Text(""),
+              ],
+            ),
+            centerTitle: true,
+            backgroundColor: Theme.of(context).primaryColor,
+          ),
+          body: StreamBuilder(
+            stream: _getCardsForCurrentDeckStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                if (widget.gameMode == 0) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) {
-                      showErrorSnackbar(context, "Сталась помилка");
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                        if (mounted) {
+                          showErrorSnackbar(context, "Сталась помилка");
+                        }
+                      }
                     }
-                  }
+                  });
                 }
-              });
-            }
 
-            return Center(
-              child: Text('Помилка завантаження карток: ${snapshot.error}'),
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            _currentCards = [];
-            _currentIndex = 0;
+                return Center(
+                  child: Text('Помилка завантаження карток: ${snapshot.error}'),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                _currentCards = [];
+                _currentIndex = 0;
 
-            if (widget.gameMode == 0) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
+                if (widget.gameMode == 0) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (mounted) {
-                      showErrorSnackbar(context, "Немає карт для повторення");
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                        if (mounted) {
+                          showErrorSnackbar(
+                            context,
+                            "Немає карт для повторення",
+                          );
+                        }
+                      }
                     }
-                  }
+                  });
                 }
-              });
-            }
 
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('У цій колоді ще немає карток.'),
-              ),
-            );
-          }
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('У цій колоді ще немає карток.'),
+                  ),
+                );
+              }
 
-          if (_currentCards.isEmpty) {
-            _currentCards = snapshot.data!;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _lenght = _currentCards.length;
+              if (_currentCards.isEmpty) {
+                _currentCards = snapshot.data!;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _lenght = _currentCards.length;
+                    });
+                  }
                 });
               }
-            });
-          }
 
-          if (_currentCards.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('У цій колоді ще немає карток (оновлено).'),
-              ),
-            );
-          }
-
-          if (_currentIndex >= _currentCards.length) {
-            _currentIndex = _currentCards.length - 1;
-          }
-
-          final currentCard = _currentCards[_currentIndex];
-          final String textToShow =
-              _showAnswer
-                  ? (widget.toFrom ? currentCard.wordFrom : currentCard.wordTo)
-                  : (widget.toFrom ? currentCard.wordTo : currentCard.wordFrom);
-
-          final String exampleToShow =
-              _showAnswer
-                  ? (widget.toFrom
-                      ? currentCard.exampleSentenceFrom ?? ""
-                      : currentCard.exampleSentenceTo ?? "")
-                  : (widget.toFrom
-                      ? currentCard.exampleSentenceTo ?? ""
-                      : currentCard.exampleSentenceFrom ?? "");
-
-          return Column(
-            children: [
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              textToShow,
-                              style: TextStyle(
-                                fontSize: 35,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (exampleToShow.isNotEmpty)
-                              Text(
-                                exampleToShow,
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
+              if (_currentCards.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('У цій колоді ще немає карток (оновлено).'),
                   ),
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: TextField(
-                          controller: _translationController,
-                          decoration: InputDecoration(
-                            hintText: "Введи переклад тут",
+                );
+              }
+
+              if (_currentIndex >= _currentCards.length) {
+                _currentIndex = _currentCards.length - 1;
+              }
+
+              final currentCard = _currentCards[_currentIndex];
+              final String textToShow =
+                  _showAnswer
+                      ? (widget.toFrom
+                          ? currentCard.wordFrom
+                          : currentCard.wordTo)
+                      : (widget.toFrom
+                          ? currentCard.wordTo
+                          : currentCard.wordFrom);
+
+              final String exampleToShow =
+                  _showAnswer
+                      ? (widget.toFrom
+                          ? currentCard.exampleSentenceFrom ?? ""
+                          : currentCard.exampleSentenceTo ?? "")
+                      : (widget.toFrom
+                          ? currentCard.exampleSentenceTo ?? ""
+                          : currentCard.exampleSentenceFrom ?? "");
+
+              return Column(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 20),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  textToShow,
+                                  style: TextStyle(
+                                    fontSize: 35,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (exampleToShow.isNotEmpty)
+                                  Text(
+                                    exampleToShow,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w300,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                          enabled: !_showAnswer,
-                          autofocus: true,
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    disabledForegroundColor:
-                                        Theme.of(context).colorScheme.secondary,
-                                  ),
-                                  onPressed:
-                                      _showAnswer
-                                          ? () =>
-                                              _checkOrGoNext(isCorrect: true)
-                                          : _toggleShowAnswer,
-                                  child: Text(
-                                    _showAnswer ? "Вірно" : "Показати",
-                                  ),
-                                ),
+                  Expanded(
+                    flex: 3,
+                    child: Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 20),
+                            child: TextField(
+                              controller: _translationController,
+                              decoration: InputDecoration(
+                                hintText: "Введи переклад тут",
                               ),
+                              enabled: !_showAnswer,
+                              autofocus: true,
+                              onSubmitted: (_) => _checkOrGoNext(),
                             ),
-                            Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 6),
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    disabledForegroundColor:
-                                        Theme.of(context).colorScheme.secondary,
-                                  ),
-                                  onPressed: _checkOrGoNext,
-                                  child: Text(
-                                    _showAnswer ? "Повторити" : "Далі",
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          );
-        },
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor,
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 6),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        disabledForegroundColor:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
+                                      ),
+                                      onPressed:
+                                          _showAnswer
+                                              ? () => _checkOrGoNext(
+                                                isCorrect: true,
+                                              )
+                                              : _toggleShowAnswer,
+                                      child: Text(
+                                        _showAnswer ? "Вірно" : "Показати",
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        disabledForegroundColor:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
+                                      ),
+                                      onPressed: _checkOrGoNext,
+                                      child: Text(
+                                        _showAnswer ? "Повторити" : "Далі",
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
