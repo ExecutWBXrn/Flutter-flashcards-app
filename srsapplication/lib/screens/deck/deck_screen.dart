@@ -5,12 +5,13 @@ import 'package:provider/provider.dart';
 import 'package:srsapplication/models/deck_model.dart';
 import 'package:srsapplication/screens/deck/deck_create.dart';
 import 'package:srsapplication/screens/card/cards_screen.dart';
-import 'package:srsapplication/screens/drawer/about.dart';
 import 'package:srsapplication/screens/drawer/settings.dart';
 import 'package:srsapplication/screens/drawer/info.dart';
 import 'package:srsapplication/themes/themes.dart';
 import 'package:srsapplication/screens/games/game.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:srsapplication/func/card_deck/func.dart';
+import '../../func/messages/snackbars.dart';
 
 class DeckScreen extends StatefulWidget {
   final String? parentId;
@@ -72,32 +73,6 @@ class _DeckScreenState extends State<DeckScreen> {
     });
   }
 
-  Stream<List<Deck>> _getUserDecksStream() {
-    final User? user = _auth.currentUser;
-    if (user == null) {
-      return Stream.value([]);
-    }
-
-    Query query = _firestore
-        .collection('decks')
-        .where('userId', isEqualTo: user.uid);
-
-    if (widget.parentId == null) {
-      query = query.where('parentId', isNull: true);
-    } else {
-      query = query.where('parentId', isEqualTo: widget.parentId);
-    }
-
-    return query
-        .orderBy('createdAt', descending: true)
-        .withConverter<Deck>(
-          fromFirestore: Deck.fromFirestore,
-          toFirestore: (Deck deck, _) => deck.toFirestore(),
-        )
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
-  }
-
   void _navigateToCreateDeckScreen() {
     setState(() {
       _choosenDeck = null;
@@ -122,16 +97,6 @@ class _DeckScreenState extends State<DeckScreen> {
         builder:
             (context) =>
                 CardListScreen(parentId: deck.id, parentDeckName: deck.name),
-      ),
-    );
-  }
-
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
   }
@@ -269,7 +234,7 @@ class _DeckScreenState extends State<DeckScreen> {
                             ? NetworkImage(_auth.currentUser!.photoURL!)
                             : null,
                     child:
-                        (_auth.currentUser?.photoURL! == null)
+                        (_auth.currentUser?.photoURL == null)
                             ? Text(
                               _auth.currentUser?.email?[0].toUpperCase() ?? 'U',
                               style: TextStyle(
@@ -333,18 +298,7 @@ class _DeckScreenState extends State<DeckScreen> {
                 );
               },
             ),
-            const Divider(), // Розділювач
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Про додаток'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AboutPage()),
-                );
-              },
-            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Вийти'),
@@ -357,7 +311,7 @@ class _DeckScreenState extends State<DeckScreen> {
         ),
       ),
       body: StreamBuilder<List<Deck>>(
-        stream: _getUserDecksStream(),
+        stream: getUserDecksStream(widget.parentId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -419,76 +373,105 @@ class _DeckScreenState extends State<DeckScreen> {
                       ),
                     ],
                   ),
-                  trailing: PopupMenuButton<GameAction>(
-                    icon: Icon(Icons.play_arrow, size: 40, color: Colors.green),
-                    itemBuilder:
-                        (BuildContext context) => <PopupMenuEntry<GameAction>>[
-                          const PopupMenuItem<GameAction>(
-                            value: GameAction.learn,
-                            child: ListTile(
-                              leading: Icon(Icons.task_alt),
-                              title: Text('Learn it'),
-                            ),
-                          ),
-                          const PopupMenuItem<GameAction>(
-                            value: GameAction.repeat,
-                            child: ListTile(
-                              leading: Icon(Icons.assignment_outlined),
-                              title: Text('Write it'),
-                            ),
-                          ),
-                          const PopupMenuItem<GameAction>(
-                            value: GameAction.repeat2,
-                            child: ListTile(
-                              leading: Icon(Icons.assignment_outlined),
-                              title: Text('Write it mode 2'),
-                            ),
-                          ),
-                        ],
-                    onSelected: (GameAction action) {
-                      if (deck.cardCount > 0) {
-                        if (action == GameAction.learn) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => GamePage(
-                                    deckId: deck.id,
-                                    gameMode: 0,
-                                    toFrom: _currentFrom ?? true,
-                                  ),
-                            ),
-                          );
-                        } else if (action == GameAction.repeat) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => GamePage(
-                                    deckId: deck.id,
-                                    gameMode: 1,
-                                    toFrom: _currentFrom ?? true,
-                                  ),
-                            ),
-                          );
-                        } else if (action == GameAction.repeat2) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (context) => GamePage(
-                                    deckId: deck.id,
-                                    gameMode: 2,
-                                    toFrom: _currentFrom ?? true,
-                                  ),
-                            ),
-                          );
-                        }
+                  trailing: FutureBuilder(
+                    future: getRepeatDecks(deck.id),
+                    builder: (
+                      BuildContext context,
+                      AsyncSnapshot<bool> snapshot,
+                    ) {
+                      bool currentPlayIconColor;
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        currentPlayIconColor = snapshot.data ?? false;
+                      } else if (snapshot.hasError) {
+                        currentPlayIconColor = false;
+                      } else if (snapshot.hasData) {
+                        currentPlayIconColor = snapshot.data!;
                       } else {
-                        _showErrorSnackbar(
-                          "Додайте картки в колоду для їхнього вивчення",
-                        );
+                        currentPlayIconColor = false;
                       }
+
+                      return PopupMenuButton<GameAction>(
+                        icon: Icon(
+                          Icons.play_arrow,
+                          size: 40,
+                          color:
+                              currentPlayIconColor ? Colors.red : Colors.green,
+                        ),
+                        itemBuilder:
+                            (BuildContext context) =>
+                                <PopupMenuEntry<GameAction>>[
+                                  const PopupMenuItem<GameAction>(
+                                    value: GameAction.learn,
+                                    child: ListTile(
+                                      leading: Icon(Icons.task_alt),
+                                      title: Text('Learn it'),
+                                    ),
+                                  ),
+                                  const PopupMenuItem<GameAction>(
+                                    value: GameAction.repeat,
+                                    child: ListTile(
+                                      leading: Icon(Icons.assignment_outlined),
+                                      title: Text('Write it'),
+                                    ),
+                                  ),
+                                  const PopupMenuItem<GameAction>(
+                                    value: GameAction.repeat2,
+                                    child: ListTile(
+                                      leading: Icon(Icons.assignment_outlined),
+                                      title: Text('Write it mode 2'),
+                                    ),
+                                  ),
+                                ],
+                        onSelected: (GameAction action) {
+                          if (deck.cardCount > 0) {
+                            if (action == GameAction.learn) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => GamePage(
+                                        deckId: deck.id,
+                                        gameMode: 0,
+                                        toFrom: _currentFrom ?? true,
+                                      ),
+                                ),
+                              );
+                            } else if (action == GameAction.repeat) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => GamePage(
+                                        deckId: deck.id,
+                                        gameMode: 1,
+                                        toFrom: _currentFrom ?? true,
+                                      ),
+                                ),
+                              );
+                            } else if (action == GameAction.repeat2) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => GamePage(
+                                        deckId: deck.id,
+                                        gameMode: 2,
+                                        toFrom: _currentFrom ?? true,
+                                      ),
+                                ),
+                              );
+                            }
+                          } else {
+                            if (mounted) {
+                              showErrorSnackbar(
+                                context,
+                                "Додайте картки в колоду для їхнього вивчення",
+                              );
+                            }
+                          }
+                        },
+                      );
                     },
                   ),
                   onLongPress: () {
@@ -517,7 +500,12 @@ class _DeckScreenState extends State<DeckScreen> {
               _navigateToCreateDeckScreen,
             ),
             _buildBottomNavItem(Icons.add, 'Додати картку', () {
-              _showErrorSnackbar("Виберіть колоду для додавання картки");
+              if (mounted) {
+                showErrorSnackbar(
+                  context,
+                  "Виберіть колоду для додавання картки",
+                );
+              }
             }),
           ],
         ),

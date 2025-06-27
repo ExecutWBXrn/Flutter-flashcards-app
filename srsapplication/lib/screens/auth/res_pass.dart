@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../func/card_deck/func.dart';
+import '../../func/messages/snackbars.dart';
+
 class ResPass extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
@@ -14,29 +17,21 @@ class _resetPasswordPage extends State<ResPass> {
   bool _isLoading = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
-  }
-
   Future<void> _resetPasswordRequest(String email) async {
     if (email.trim().isEmpty) {
-      _showErrorSnackbar("Поле email не може бути порожнім");
+      if (mounted) {
+        showErrorSnackbar(context, "Поле email не може бути порожнім");
+      }
+
       return;
     } else if (!email.trim().contains("@") || !email.trim().contains(".")) {
-      _showErrorSnackbar("Будь ласка, введіть коректну email адресу.");
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Будь ласка, введіть коректну email адресу.",
+        );
+      }
+
       return;
     }
 
@@ -46,9 +41,13 @@ class _resetPasswordPage extends State<ResPass> {
 
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      _showSuccessSnackbar(
-        "Email для відновлення пароля було надіслано на електронну адресу",
-      );
+      if (mounted) {
+        showSuccessSnackbar(
+          context,
+          "Email для відновлення пароля було надіслано на електронну адресу",
+        );
+      }
+
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
@@ -59,13 +58,20 @@ class _resetPasswordPage extends State<ResPass> {
       } else if (e.code == 'invalid-email') {
         message = "Вказано некоректну email адресу.";
       }
-      // Можна додати інші коди помилок з документації Firebase
-      _showErrorSnackbar(message);
+      if (mounted) {
+        showErrorSnackbar(context, message);
+      }
+
       print(
         "FirebaseAuthException on password reset: ${e.code} - ${e.message}",
       );
     } catch (e) {
-      _showErrorSnackbar("Сталась невідома помилка. Спробуйте пізніше.");
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Сталась невідома помилка. Спробуйте пізніше.",
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

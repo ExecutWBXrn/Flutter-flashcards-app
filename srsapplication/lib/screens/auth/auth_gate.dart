@@ -39,7 +39,7 @@ class AuthGate extends StatelessWidget {
               User? refreshedUser = userRefreshSnapshot.data;
 
               if (refreshedUser != null && refreshedUser.emailVerified) {
-                return DeckScreen(); // Перенаправляємо на головний екран
+                return DeckScreen();
               } else {
                 return AuthScreen();
               }

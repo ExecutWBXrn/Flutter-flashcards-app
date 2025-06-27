@@ -50,7 +50,7 @@ class FlashCard {
     }
     return FlashCard(
       cardId: snapshot.id,
-      userId: data?['userId'] ?? '',
+      userId: data['userId'] ?? '',
       wordFrom: data['wordFrom'] ?? '',
       wordTo: data['wordTo'] ?? '',
       exampleSentenceFrom: data['exampleSentenceFrom'],

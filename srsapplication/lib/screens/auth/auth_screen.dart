@@ -4,6 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../../func/card_deck/func.dart';
+import '../../func/messages/snackbars.dart';
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -76,12 +79,19 @@ class _AuthScreenState extends State<AuthScreen> {
       } else if (e.code == 'invalid-credential') {
         message = "Недійсні облікові дані Google.";
       }
-      _showErrorSnackbar(message);
+      if (mounted) {
+        showErrorSnackbar(context, message);
+      }
       print(
         "FirebaseAuthException під час входу через Google: ${e.code} - ${e.message}",
       );
     } catch (e) {
-      _showErrorSnackbar("Сталася помилка під час входу через Google: $e");
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Сталася помилка під час входу через Google",
+        );
+      }
       print("Помилка під час входу через Google: $e");
     } finally {
       if (mounted) {
@@ -90,23 +100,6 @@ class _AuthScreenState extends State<AuthScreen> {
         });
       }
     }
-  }
-
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
   }
 
   void _startResendCooldownTimer(int per) {
@@ -132,11 +125,20 @@ class _AuthScreenState extends State<AuthScreen> {
 
     User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      _showErrorSnackbar("Неможливо відправити лист: користувач не увійшов.");
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Неможливо відправити лист: користувач не увійшов.",
+        );
+      }
+
       return;
     }
     if (currentUser.emailVerified) {
-      _showErrorSnackbar("Ваш email вже підтверджено.");
+      if (mounted) {
+        showErrorSnackbar(context, "Ваш email вже підтверджено.");
+      }
+
       setState(() {
         _isResendButtonDisabled = true;
       });
@@ -157,9 +159,12 @@ class _AuthScreenState extends State<AuthScreen> {
       _startResendCooldownTimer(30);
     } catch (e) {
       print("Error resending verification email: $e");
-      _showErrorSnackbar(
-        "Не вдалось повторно відправити лист. Спробуйте пізніше.",
-      );
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Не вдалось повторно відправити лист. Спробуйте пізніше.",
+        );
+      }
     }
   }
 
@@ -184,9 +189,12 @@ class _AuthScreenState extends State<AuthScreen> {
         });
       }
     } catch (e) {
-      _showErrorSnackbar(
-        "Не вдалось відправити лист для підтвердження. Спробуйте пізніше.",
-      );
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Не вдалось відправити лист для підтвердження. Спробуйте пізніше.",
+        );
+      }
     }
   }
 
@@ -210,9 +218,12 @@ class _AuthScreenState extends State<AuthScreen> {
         print("Logged in: ${userCredential.user?.uid}");
         if (userCredential.user != null &&
             !userCredential.user!.emailVerified) {
-          _showErrorSnackbar(
-            "Ваш email ще не підтверджено. Будь ласка, перевірте свою пошту.",
-          );
+          if (mounted) {
+            showErrorSnackbar(
+              context,
+              "Ваш email ще не підтверджено. Будь ласка, перевірте свою пошту.",
+            );
+          }
           setState(() {
             _isTriedToReg = true;
             _isResendButtonDisabled = false;
@@ -243,10 +254,14 @@ class _AuthScreenState extends State<AuthScreen> {
       } else if (e.code == 'email-already-in-use') {
         message = 'Цей email вже використовується іншим акаунтом.';
       }
-      _showErrorSnackbar(message);
+      if (mounted) {
+        showErrorSnackbar(context, message);
+      }
     } catch (e) {
       print(e);
-      _showErrorSnackbar("Невідома помилка. Спробуйте ще раз.");
+      if (mounted) {
+        showErrorSnackbar(context, "Невідома помилка. Спробуйте ще раз.");
+      }
     } finally {
       if (mounted) {
         setState(() {

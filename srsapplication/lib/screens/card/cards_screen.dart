@@ -7,8 +7,9 @@ import 'package:srsapplication/models/card_model.dart';
 import 'package:srsapplication/screens/deck/deck_create.dart';
 import 'package:srsapplication/screens/card/card_create.dart';
 import 'package:srsapplication/screens/games/game.dart';
-
-import '../deck/deck_screen.dart';
+import 'package:srsapplication/screens/deck/deck_screen.dart';
+import 'package:srsapplication/func/card_deck/func.dart';
+import '../../func/messages/snackbars.dart';
 
 class CardListScreen extends StatefulWidget {
   final String parentId;
@@ -63,32 +64,6 @@ class _cardListScreenState extends State<CardListScreen> {
       _currentFrom = pref.getBool("toFrom");
       _currentFrom ??= true;
     });
-  }
-
-  Stream<List<Deck>> _getUserDecksStream({String order = 'createdAt'}) {
-    final User? user = _auth.currentUser;
-    if (user == null) {
-      return Stream.value([]);
-    }
-
-    Query query = _firestore
-        .collection('decks')
-        .where('userId', isEqualTo: user.uid);
-
-    if (widget.parentId == null) {
-      query = query.where('parentId', isNull: true);
-    } else {
-      query = query.where('parentId', isEqualTo: widget.parentId);
-    }
-
-    return query
-        .orderBy(order, descending: true)
-        .withConverter<Deck>(
-          fromFirestore: Deck.fromFirestore,
-          toFirestore: (Deck deck, _) => deck.toFirestore(),
-        )
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
   Stream<List<FlashCard>> _getCardsForCurrentDeckStream({
@@ -182,25 +157,19 @@ class _cardListScreenState extends State<CardListScreen> {
       _choosenCard = null;
     });
     if (widget.parentId == null) {
-      _showErrorSnackbar(
-        "Спочатку виберіть або створіть колоду для додавання картки.",
-      );
+      if (mounted) {
+        showErrorSnackbar(
+          context,
+          "Спочатку виберіть або створіть колоду для додавання картки.",
+        );
+      }
+
       return;
     }
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CreateEditCardScreen(deckId: widget.parentId),
-      ),
-    );
-  }
-
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
   }
@@ -314,7 +283,7 @@ class _cardListScreenState extends State<CardListScreen> {
       body: CustomScrollView(
         slivers: <Widget>[
           StreamBuilder<List<Deck>>(
-            stream: _getUserDecksStream(),
+            stream: getUserDecksStream(widget.parentId),
             builder: (context, snapshot) {
               try {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -364,82 +333,112 @@ class _cardListScreenState extends State<CardListScreen> {
                             ),
                           ],
                         ),
-                        trailing: PopupMenuButton<GameAction>(
-                          icon: Icon(
-                            Icons.play_arrow,
-                            size: 40,
-                            color: Colors.green,
-                          ),
-                          itemBuilder:
-                              (
-                                BuildContext context,
-                              ) => <PopupMenuEntry<GameAction>>[
-                                const PopupMenuItem<GameAction>(
-                                  value: GameAction.learn,
-                                  child: ListTile(
-                                    leading: Icon(Icons.task_alt),
-                                    title: Text('Learn it'),
-                                  ),
-                                ),
-                                const PopupMenuItem<GameAction>(
-                                  value: GameAction.repeat,
-                                  child: ListTile(
-                                    leading: Icon(Icons.assignment_outlined),
-                                    title: Text('Write it'),
-                                  ),
-                                ),
-                                const PopupMenuItem<GameAction>(
-                                  value: GameAction.repeat2,
-                                  child: ListTile(
-                                    leading: Icon(Icons.assignment_outlined),
-                                    title: Text('Write it mode 2'),
-                                  ),
-                                ),
-                              ],
-                          onSelected: (GameAction action) {
-                            if (deck.cardCount > 0) {
-                              if (action == GameAction.learn) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => GamePage(
-                                          deckId: deck.id,
-                                          gameMode: 0,
-                                          toFrom: _currentFrom ?? true,
-                                        ),
-                                  ),
-                                );
-                              } else if (action == GameAction.repeat) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => GamePage(
-                                          deckId: deck.id,
-                                          gameMode: 1,
-                                          toFrom: _currentFrom ?? true,
-                                        ),
-                                  ),
-                                );
-                              } else if (action == GameAction.repeat2) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => GamePage(
-                                          deckId: deck.id,
-                                          gameMode: 2,
-                                          toFrom: _currentFrom ?? true,
-                                        ),
-                                  ),
-                                );
-                              }
+                        trailing: FutureBuilder(
+                          future: getRepeatDecks(deck.id),
+                          builder: (
+                            BuildContext context,
+                            AsyncSnapshot<bool> snapshot,
+                          ) {
+                            bool currentPlayIconColor;
+
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              currentPlayIconColor = snapshot.data ?? false;
+                            } else if (snapshot.hasError) {
+                              currentPlayIconColor = false;
+                            } else if (snapshot.hasData) {
+                              currentPlayIconColor = snapshot.data!;
                             } else {
-                              _showErrorSnackbar(
-                                "Додайте картки в колоду для їхнього вивчення",
-                              );
+                              currentPlayIconColor = false;
                             }
+
+                            return PopupMenuButton<GameAction>(
+                              icon: Icon(
+                                Icons.play_arrow,
+                                size: 40,
+                                color:
+                                    currentPlayIconColor
+                                        ? Colors.red
+                                        : Colors.green,
+                              ),
+                              itemBuilder:
+                                  (BuildContext context) =>
+                                      <PopupMenuEntry<GameAction>>[
+                                        const PopupMenuItem<GameAction>(
+                                          value: GameAction.learn,
+                                          child: ListTile(
+                                            leading: Icon(Icons.task_alt),
+                                            title: Text('Learn it'),
+                                          ),
+                                        ),
+                                        const PopupMenuItem<GameAction>(
+                                          value: GameAction.repeat,
+                                          child: ListTile(
+                                            leading: Icon(
+                                              Icons.assignment_outlined,
+                                            ),
+                                            title: Text('Write it'),
+                                          ),
+                                        ),
+                                        const PopupMenuItem<GameAction>(
+                                          value: GameAction.repeat2,
+                                          child: ListTile(
+                                            leading: Icon(
+                                              Icons.assignment_outlined,
+                                            ),
+                                            title: Text('Write it mode 2'),
+                                          ),
+                                        ),
+                                      ],
+                              onSelected: (GameAction action) {
+                                if (deck.cardCount > 0) {
+                                  if (action == GameAction.learn) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => GamePage(
+                                              deckId: deck.id,
+                                              gameMode: 0,
+                                              toFrom: _currentFrom ?? true,
+                                            ),
+                                      ),
+                                    );
+                                  } else if (action == GameAction.repeat) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => GamePage(
+                                              deckId: deck.id,
+                                              gameMode: 1,
+                                              toFrom: _currentFrom ?? true,
+                                            ),
+                                      ),
+                                    );
+                                  } else if (action == GameAction.repeat2) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => GamePage(
+                                              deckId: deck.id,
+                                              gameMode: 2,
+                                              toFrom: _currentFrom ?? true,
+                                            ),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  if (mounted) {
+                                    showErrorSnackbar(
+                                      context,
+                                      "Додайте картки в колоду для їхнього вивчення",
+                                    );
+                                  }
+                                }
+                              },
+                            );
                           },
                         ),
                         onLongPress: () {

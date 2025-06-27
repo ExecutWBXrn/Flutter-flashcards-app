@@ -3,6 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:srsapplication/models/card_model.dart';
 
+import '../../func/card_deck/func.dart';
+import '../../func/messages/snackbars.dart';
+
 class CreateEditCardScreen extends StatefulWidget {
   final String deckId;
   final FlashCard? existingCard;
@@ -61,29 +64,15 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
     super.dispose();
   }
 
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
-  }
-
   Future<void> _saveCard() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
     if (_auth.currentUser == null) {
-      _showErrorSnackbar('Помилка: користувач не автентифікований.');
+      if (mounted) {
+        showErrorSnackbar(context, 'Помилка: користувач не автентифікований.');
+      }
+
       return;
     }
 
@@ -130,7 +119,9 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
             .set(updatedCard);
 
         if (mounted) {
-          _showSuccessSnackbar("Картку оновленно");
+          if (mounted) {
+            showSuccessSnackbar(context, "Картку оновленно");
+          }
           Navigator.of(context).pop();
         }
       } else {
@@ -165,12 +156,16 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
         }
 
         if (mounted) {
-          _showSuccessSnackbar('Картку створено!');
+          if (mounted) {
+            showSuccessSnackbar(context, 'Картку створено!');
+          }
           Navigator.of(context).pop();
         }
       }
     } catch (e) {
-      _showErrorSnackbar("Помилка створення картки");
+      if (mounted) {
+        showErrorSnackbar(context, "Помилка створення картки");
+      }
     } finally {
       if (mounted) {
         setState(() {

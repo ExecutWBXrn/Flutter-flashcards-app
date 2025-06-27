@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:srsapplication/models/deck_model.dart';
 
+import '../../func/messages/snackbars.dart';
+
 class CreateEditDeckScreen extends StatefulWidget {
   final Deck? deckToEdit;
   final String? parentDeckId;
@@ -47,23 +49,6 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
     super.dispose();
   }
 
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
-  }
-
   Future<void> _saveDeck() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -72,7 +57,12 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
 
       final User? currentUser = _auth.currentUser;
       if (currentUser == null) {
-        _showErrorSnackbar('Помилка: користувач не автентифікований.');
+        if (mounted) {
+          showErrorSnackbar(
+            context,
+            'Помилка: користувач не автентифікований.',
+          );
+        }
         setState(() {
           _isLoading = false;
         });
@@ -99,19 +89,26 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
               .collection('decks')
               .doc(widget.deckToEdit!.id)
               .update(deckData);
-          _showSuccessSnackbar('Колоду успішно оновлено!');
+          if (mounted) {
+            showSuccessSnackbar(context, 'Колоду успішно оновлено!');
+          }
         } else {
           deckData['createdAt'] = now;
           deckData['cardCount'] = 0;
           await _firestore.collection('decks').add(deckData);
-          _showSuccessSnackbar('Колоду успішно створено!');
+          if (mounted) {
+            showSuccessSnackbar(context, 'Колоду успішно створено!');
+          }
         }
         Navigator.pop(context);
       } catch (e) {
         print("Помилка збереження колоди: $e");
-        _showErrorSnackbar(
-          'Не вдалося зберегти колоду. Сталась невідома помилка',
-        );
+        if (mounted) {
+          showErrorSnackbar(
+            context,
+            'Не вдалося зберегти колоду. Сталась невідома помилка',
+          );
+        }
       } finally {
         if (mounted) {
           setState(() {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:srsapplication/models/card_model.dart';
+import '../../func/messages/snackbars.dart';
 
 class GamePage extends StatefulWidget {
   String deckId;
@@ -151,7 +152,9 @@ class _game1 extends State<GamePage> {
         if (correct || isCorrect) {
           print("Правильно!");
           if (!isCorrect) {
-            _showSuccessSnackbar("Правильно!");
+            if (mounted) {
+              showSuccessSnackbar(context, "Правильно!");
+            }
           }
           _updateCardReview(currentCard, true);
           _goToNextCard();
@@ -159,9 +162,12 @@ class _game1 extends State<GamePage> {
           if (_showAnswer) {
             _updateCardReview(currentCard, false);
           } else {
-            _showErrorSnackbar(
-              "Неправильно! Правильна відповідь: ${widget.toFrom ? currentCard.wordFrom : currentCard.wordTo}",
-            );
+            if (mounted) {
+              showErrorSnackbar(
+                context,
+                "Неправильно! Правильна відповідь: ${widget.toFrom ? currentCard.wordFrom : currentCard.wordTo}",
+              );
+            }
           }
           _toggleShowAnswer();
         }
@@ -187,30 +193,15 @@ class _game1 extends State<GamePage> {
         _currentIndex++;
       } else {
         _currentIndex = 0;
-        _showSuccessSnackbar("Всі картки переглянуто!");
+        if (mounted) {
+          showSuccessSnackbar(context, "Всі картки переглянуто!");
+        }
         Navigator.pop(context);
       }
       _showAnswer = false;
       _wasAddedInArr = false;
       _translationController.clear();
     });
-  }
-
-  void _showErrorSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
-  }
-
-  void _showSuccessSnackbar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
-    );
   }
 
   @override
@@ -243,7 +234,9 @@ class _game1 extends State<GamePage> {
                 if (mounted) {
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
-                    _showErrorSnackbar("Сталась помилка");
+                    if (mounted) {
+                      showErrorSnackbar(context, "Сталась помилка");
+                    }
                   }
                 }
               });
@@ -262,7 +255,9 @@ class _game1 extends State<GamePage> {
                 if (mounted) {
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
-                    _showErrorSnackbar("Немає карт для повторення");
+                    if (mounted) {
+                      showErrorSnackbar(context, "Немає карт для повторення");
+                    }
                   }
                 }
               });
