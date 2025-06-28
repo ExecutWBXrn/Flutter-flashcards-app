@@ -64,6 +64,26 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
     super.dispose();
   }
 
+  Future<void> _addIncrement(String deckId) async {
+    try {
+      final deckDocRef = _firestore.collection('decks').doc(deckId);
+      await deckDocRef.update({'cardCount': FieldValue.increment(1)});
+      try {
+        DocumentSnapshot snap = await deckDocRef.get();
+        if (snap.exists) {
+          String? parentId = (snap.data() as Map<String, dynamic>)['parentId'];
+          if (parentId != null) {
+            _addIncrement(parentId);
+          }
+        }
+      } catch (e) {
+        print("Помилка оновлення лічильника карток у колоді: $e");
+      }
+    } catch (e) {
+      print("Помилка оновлення лічильника карток у колоді: $e");
+    }
+  }
+
   Future<void> _saveCard() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -148,12 +168,7 @@ class _CreateEditCardScreenState extends State<CreateEditCardScreen> {
 
         await cardRef.set(newCard.toFirestore());
 
-        try {
-          final deckDocRef = _firestore.collection('decks').doc(widget.deckId);
-          await deckDocRef.update({'cardCount': FieldValue.increment(1)});
-        } catch (e) {
-          print("Помилка оновлення лічильника карток у колоді: $e");
-        }
+        _addIncrement(widget.deckId);
 
         if (mounted) {
           if (mounted) {

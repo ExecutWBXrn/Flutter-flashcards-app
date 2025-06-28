@@ -35,6 +35,7 @@ class _cardListScreenState extends State<CardListScreen> {
   Deck? _choosenDeck;
   FlashCard? _choosenCard;
   bool? _currentFrom;
+  int _lenght = 0;
 
   @override
   void initState() {
@@ -174,9 +175,24 @@ class _cardListScreenState extends State<CardListScreen> {
     );
   }
 
-  Future<void> deleteDeck(String deckId) async {
-    final deckService = DeckService();
-    await deckService.deleteDeckHierarchically(deckId);
+  Future<void> _addDecrement(String deckId) async {
+    try {
+      final deckDocRef = _firestore.collection('decks').doc(deckId);
+      await deckDocRef.update({'cardCount': FieldValue.increment(-1)});
+      try {
+        DocumentSnapshot snap = await deckDocRef.get();
+        if (snap.exists) {
+          String? parentId = (snap.data() as Map<String, dynamic>)['parentId'];
+          if (parentId != null) {
+            _addDecrement(parentId);
+          }
+        }
+      } catch (e) {
+        print("Помилка оновлення лічильника карток у колоді: $e");
+      }
+    } catch (e) {
+      print("Помилка оновлення лічильника карток у колоді: $e");
+    }
   }
 
   Future<void> deleteCardOnly(String cardId) async {
@@ -192,20 +208,14 @@ class _cardListScreenState extends State<CardListScreen> {
     } catch (e) {
       print('Error deleting card document $cardId: $e');
     }
-    try {
-      final deckDocRef = _firestore.collection('decks').doc(widget.parentId);
-      print(widget.parentId);
-      await deckDocRef.update({'cardCount': FieldValue.increment(-1)});
-    } catch (e) {
-      print("Помилка оновлення лічильника карток у колоді: $e");
-    }
+    _addDecrement(widget.parentId);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Flashcards'),
+        title: Column(children: [Text("Flashcards")]),
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
@@ -229,11 +239,16 @@ class _cardListScreenState extends State<CardListScreen> {
                       ),
                     ),
                   ],
-              onSelected: (MenuAction action) {
+              onSelected: (MenuAction action) async {
                 if (action == MenuAction.delete) {
-                  _choosenDeck != null
-                      ? deleteDeck(_choosenDeck!.id)
-                      : deleteCardOnly(_choosenCard!.cardId);
+                  if (_choosenDeck != null) {
+                    await showAlertDeleteDeckDialog(context, _choosenDeck);
+                    setState(() {
+                      _choosenDeck = null;
+                    });
+                  } else {
+                    deleteCardOnly(_choosenCard!.cardId);
+                  }
                 } else if (action == MenuAction.edit) {
                   _choosenDeck != null
                       ? Navigator.push(
@@ -362,34 +377,35 @@ class _cardListScreenState extends State<CardListScreen> {
                                         : Colors.green,
                               ),
                               itemBuilder:
-                                  (BuildContext context) =>
-                                      <PopupMenuEntry<GameAction>>[
-                                        const PopupMenuItem<GameAction>(
-                                          value: GameAction.learn,
-                                          child: ListTile(
-                                            leading: Icon(Icons.task_alt),
-                                            title: Text('Learn it'),
-                                          ),
+                                  (
+                                    BuildContext context,
+                                  ) => <PopupMenuEntry<GameAction>>[
+                                    const PopupMenuItem<GameAction>(
+                                      value: GameAction.learn,
+                                      child: ListTile(
+                                        leading: Icon(Icons.task_alt),
+                                        title: Text('Learn it'),
+                                      ),
+                                    ),
+                                    const PopupMenuItem<GameAction>(
+                                      value: GameAction.repeat,
+                                      child: ListTile(
+                                        leading: Icon(
+                                          Icons.assignment_outlined,
                                         ),
-                                        const PopupMenuItem<GameAction>(
-                                          value: GameAction.repeat,
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.assignment_outlined,
-                                            ),
-                                            title: Text('Write it'),
-                                          ),
+                                        title: Text('Write all'),
+                                      ),
+                                    ),
+                                    const PopupMenuItem<GameAction>(
+                                      value: GameAction.repeat2,
+                                      child: ListTile(
+                                        leading: Icon(
+                                          Icons.assignment_outlined,
                                         ),
-                                        const PopupMenuItem<GameAction>(
-                                          value: GameAction.repeat2,
-                                          child: ListTile(
-                                            leading: Icon(
-                                              Icons.assignment_outlined,
-                                            ),
-                                            title: Text('Write it mode 2'),
-                                          ),
-                                        ),
-                                      ],
+                                        title: Text('Write first level cards'),
+                                      ),
+                                    ),
+                                  ],
                               onSelected: (GameAction action) {
                                 if (deck.cardCount > 0) {
                                   if (action == GameAction.learn) {

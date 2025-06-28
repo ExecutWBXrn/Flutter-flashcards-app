@@ -47,7 +47,9 @@ class Info extends StatelessWidget {
   int _cardCount(List<Deck> decks) {
     int _cardCount = 0;
     for (Deck deck in decks) {
-      _cardCount += deck.cardCount;
+      if (deck.parentId == null) {
+        _cardCount += deck.cardCount;
+      }
     }
     return _cardCount;
   }
@@ -116,16 +118,6 @@ class Info extends StatelessWidget {
                   child: Center(child: Text('Error loading decks!')),
                 );
               }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text('There are no cards in this deck yet'),
-                    ),
-                  ),
-                );
-              }
 
               final data = snapshot.data;
 
@@ -174,16 +166,6 @@ class Info extends StatelessWidget {
                 print("Snap err: ${snapshot.error}");
                 return const SliverToBoxAdapter(
                   child: Center(child: Text('Error loading cards!')),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text('There are no cards in this deck yet.'),
-                    ),
-                  ),
                 );
               }
 

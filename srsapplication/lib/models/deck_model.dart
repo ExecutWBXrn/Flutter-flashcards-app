@@ -87,6 +87,36 @@ class DeckService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  Future<void> deleteCardCount(
+    String deckId, {
+    bool first = true,
+    int count = 0,
+  }) async {
+    try {
+      final deckDocRef = _firestore.collection('decks').doc(deckId);
+      if (!first) {
+        await deckDocRef.update({'cardCount': FieldValue.increment(-count)});
+      }
+      try {
+        DocumentSnapshot snap = await deckDocRef.get();
+        if (snap.exists) {
+          String? parentId = (snap.data() as Map<String, dynamic>)['parentId'];
+          int countFetched = count;
+          if (first) {
+            countFetched = (snap.data() as Map<String, dynamic>)['cardCount'];
+          }
+          if (parentId != null) {
+            deleteCardCount(parentId, first: false, count: countFetched);
+          }
+        }
+      } catch (e) {
+        print("Помилка оновлення лічильника карток у колоді: $e");
+      }
+    } catch (e) {
+      print("Помилка оновлення лічильника карток у колоді: $e");
+    }
+  }
+
   Future<void> deleteDeckHierarchically(String deckId) async {
     final User? user = _auth.currentUser;
     if (user == null) {
@@ -113,6 +143,7 @@ class DeckService {
     print("Картки до видалення: $cardsToDelete");
 
     if (cardsToDelete.isNotEmpty) {
+      deleteCardCount(deckId);
       WriteBatch cardBatch = _firestore.batch();
       for (String cardId in cardsToDelete) {
         cardBatch.delete(_firestore.collection('flashcards').doc(cardId));

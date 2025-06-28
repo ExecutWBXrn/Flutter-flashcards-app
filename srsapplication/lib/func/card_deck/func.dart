@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:srsapplication/models/deck_model.dart';
 
 Stream<List<Deck>> getUserDecksStream(
@@ -60,4 +61,39 @@ Future<bool> getRepeatDecks(String deck) async {
   }
 
   return res;
+}
+
+Future<void> showAlertDeleteDeckDialog(
+  BuildContext context,
+  Deck? choosenDeck,
+) async {
+  await showDialog(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        title: Text("Are you sure you want to delete the deck?"),
+        actions: <Widget>[
+          FilledButton(
+            onPressed: () {
+              deleteDeck(choosenDeck!.id);
+              Navigator.of(dialogContext).pop();
+            },
+            child: Text("Yes"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              return null;
+            },
+            child: Text("No"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> deleteDeck(String deckId) async {
+  final deckService = DeckService();
+  await deckService.deleteDeckHierarchically(deckId);
 }

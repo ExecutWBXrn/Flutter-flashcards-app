@@ -101,11 +101,6 @@ class _DeckScreenState extends State<DeckScreen> {
     );
   }
 
-  Future<void> deleteDeck(String deckId) async {
-    final deckService = DeckService();
-    await deckService.deleteDeckHierarchically(deckId);
-  }
-
   Widget _buildBottomNavItem(
     IconData icon,
     String label,
@@ -170,9 +165,12 @@ class _DeckScreenState extends State<DeckScreen> {
                       ),
                     ),
                   ],
-              onSelected: (MenuAction action) {
+              onSelected: (MenuAction action) async {
                 if (action == MenuAction.delete) {
-                  deleteDeck(_choosenDeck!.id);
+                  await showAlertDeleteDeckDialog(context, _choosenDeck);
+                  setState(() {
+                    _choosenDeck = null;
+                  });
                 } else if (action == MenuAction.edit) {
                   Navigator.push(
                     context,
@@ -412,14 +410,14 @@ class _DeckScreenState extends State<DeckScreen> {
                                     value: GameAction.repeat,
                                     child: ListTile(
                                       leading: Icon(Icons.assignment_outlined),
-                                      title: Text('Write it'),
+                                      title: Text('Write all'),
                                     ),
                                   ),
                                   const PopupMenuItem<GameAction>(
                                     value: GameAction.repeat2,
                                     child: ListTile(
                                       leading: Icon(Icons.assignment_outlined),
-                                      title: Text('Write it mode 2'),
+                                      title: Text('Write first level cards'),
                                     ),
                                   ),
                                 ],
