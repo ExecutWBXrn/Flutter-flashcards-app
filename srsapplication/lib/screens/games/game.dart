@@ -5,6 +5,8 @@ import 'package:srsapplication/models/card_model.dart';
 import '../../func/messages/snackbars.dart';
 import 'package:flutter/services.dart';
 
+import '../../models/deck_model.dart';
+
 class GamePage extends StatefulWidget {
   String deckId;
   int gameMode;
@@ -26,9 +28,7 @@ class GamePage extends StatefulWidget {
 class _game1 extends State<GamePage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
   final TextEditingController _translationController = TextEditingController();
-
   final FocusNode _pageFocusNode = FocusNode();
 
   List<FlashCard> _currentCards = [];
@@ -37,18 +37,56 @@ class _game1 extends State<GamePage> {
   bool _wasAddedInArr = false;
   int _lenght = 0;
 
-  Stream<List<FlashCard>> _getCardsForCurrentDeckStream({
-    String order = 'nextReviewAt',
-  }) {
+  Future<Set<String>> _getSubDecks(String deckId) async {
     final User? user = _auth.currentUser;
     if (user == null) {
-      return Stream.value([]);
+      return <String>{};
     }
+
+    final Set<String> allSubDeckIds = <String>{};
+
+    Query query = _firestore
+        .collection("decks")
+        .where("userId", isEqualTo: user.uid)
+        .where("parentId", isEqualTo: deckId);
+
+    try {
+      QuerySnapshot querySnap = await query.get();
+
+      final List<String> directSubDeckIdsFound = [];
+      if (querySnap.docs.isNotEmpty) {
+        for (QueryDocumentSnapshot docSnap in querySnap.docs) {
+          directSubDeckIdsFound.add(docSnap.id);
+        }
+      }
+
+      allSubDeckIds.addAll(directSubDeckIdsFound);
+
+      for (String id in directSubDeckIdsFound) {
+        final Set<String> nestedSubDecks = await _getSubDecks(id);
+        allSubDeckIds.addAll(nestedSubDecks);
+      }
+    } catch (e) {
+      print("Помилка під час отримання підколод для $deckId: $e");
+    }
+
+    print("SubDecks: $allSubDeckIds");
+
+    return allSubDeckIds;
+  }
+
+  Future<List<FlashCard>> _getCardsForCurrentDeckStream({
+    String order = 'nextReviewAt',
+  }) async {
+    final User? user = _auth.currentUser;
+    final allSubDeckIds = await _getSubDecks(widget.deckId);
+
+    allSubDeckIds.add(widget.deckId);
 
     Query query = _firestore
         .collection('flashcards')
-        .where('userId', isEqualTo: user.uid)
-        .where('deckId', isEqualTo: widget.deckId);
+        .where('userId', isEqualTo: user?.uid)
+        .where('deckId', whereIn: allSubDeckIds);
 
     if (widget.gameMode == 0) {
       query = query
@@ -58,30 +96,32 @@ class _game1 extends State<GamePage> {
       query = query.where('proficiencyLevel', isEqualTo: 1);
     }
 
-    return query
-        .orderBy(order, descending: false)
-        .withConverter<FlashCard>(
-          fromFirestore: FlashCard.fromFirestore,
-          toFirestore: (FlashCard card, _) => card.toFirestore(),
-        )
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    try {
+      QuerySnapshot<FlashCard> QuerySnap =
+          await query
+              .orderBy(order, descending: false)
+              .withConverter<FlashCard>(
+                fromFirestore: FlashCard.fromFirestore,
+                toFirestore: (FlashCard card, _) => card.toFirestore(),
+              )
+              .get();
+
+      return QuerySnap.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   int _intervalDay(int interval) {
     if (interval == 1) {
       return 1;
-    }
-    if (interval == 2) {
+    } else if (interval == 2) {
       return 2;
-    }
-    if (interval == 3) {
+    } else if (interval == 3) {
       return 4;
-    }
-    if (interval == 4) {
+    } else if (interval == 4) {
       return 7;
-    }
-    if (interval == 5) {
+    } else if (interval == 5) {
       return 10;
     }
     return 15;
@@ -245,8 +285,8 @@ class _game1 extends State<GamePage> {
             centerTitle: true,
             backgroundColor: Theme.of(context).primaryColor,
           ),
-          body: StreamBuilder(
-            stream: _getCardsForCurrentDeckStream(),
+          body: FutureBuilder(
+            future: _getCardsForCurrentDeckStream(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(child: CircularProgressIndicator());
