@@ -63,19 +63,30 @@ Future<bool> getRepeatDecks(String deck) async {
   return res;
 }
 
+bool isChoosenDeck(String id, Set<Deck> choosenDeck) {
+  for (Deck deck in choosenDeck) {
+    if (deck.id == id) {
+      return true;
+    }
+  }
+  return false;
+}
+
 Future<void> showAlertDeleteDeckDialog(
   BuildContext context,
-  Deck? choosenDeck,
+  Set<Deck> choosenDeck,
 ) async {
   await showDialog(
     context: context,
     builder: (BuildContext dialogContext) {
       return AlertDialog(
-        title: Text("Are you sure you want to delete the deck?"),
+        title: Text("Are you sure you want to delete choosen deck?"),
         actions: <Widget>[
           FilledButton(
             onPressed: () {
-              deleteDeck(choosenDeck!.id);
+              for (Deck deck in choosenDeck) {
+                deleteDeck(deck.id);
+              }
               Navigator.of(dialogContext).pop();
             },
             child: Text("Yes"),

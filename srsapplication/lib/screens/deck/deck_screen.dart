@@ -39,7 +39,7 @@ class _DeckScreenState extends State<DeckScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   User? _currentUser;
-  Deck? _choosenDeck;
+  Set<Deck> _choosenDeck = {};
   bool? _currentFrom;
 
   @override
@@ -75,7 +75,7 @@ class _DeckScreenState extends State<DeckScreen> {
 
   void _navigateToCreateDeckScreen() {
     setState(() {
-      _choosenDeck = null;
+      _choosenDeck.clear();
     });
     Navigator.push(
       context,
@@ -89,7 +89,7 @@ class _DeckScreenState extends State<DeckScreen> {
 
   void _navigateToDeckDetailScreen(Deck deck) {
     setState(() {
-      _choosenDeck = null;
+      _choosenDeck.clear();
     });
     Navigator.push(
       context,
@@ -144,19 +144,31 @@ class _DeckScreenState extends State<DeckScreen> {
         title: Text('Decks'),
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
+        leading:
+            _choosenDeck.isNotEmpty
+                ? IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _choosenDeck.clear();
+                    });
+                  },
+                  icon: Icon(Icons.arrow_back),
+                )
+                : null,
         actions: [
-          if (_choosenDeck != null)
+          if (_choosenDeck.isNotEmpty)
             PopupMenuButton(
               icon: Icon(Icons.more_vert),
               itemBuilder:
                   (BuildContext context) => <PopupMenuEntry<MenuAction>>[
-                    const PopupMenuItem<MenuAction>(
-                      value: MenuAction.edit,
-                      child: ListTile(
-                        leading: Icon(Icons.edit),
-                        title: Text('Edit'),
+                    if (_choosenDeck.length == 1)
+                      const PopupMenuItem<MenuAction>(
+                        value: MenuAction.edit,
+                        child: ListTile(
+                          leading: Icon(Icons.edit),
+                          title: Text('Edit'),
+                        ),
                       ),
-                    ),
                     const PopupMenuItem<MenuAction>(
                       value: MenuAction.delete,
                       child: ListTile(
@@ -169,15 +181,16 @@ class _DeckScreenState extends State<DeckScreen> {
                 if (action == MenuAction.delete) {
                   await showAlertDeleteDeckDialog(context, _choosenDeck);
                   setState(() {
-                    _choosenDeck = null;
+                    _choosenDeck = {};
                   });
                 } else if (action == MenuAction.edit) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder:
-                          (context) =>
-                              CreateEditDeckScreen(deckToEdit: _choosenDeck),
+                          (context) => CreateEditDeckScreen(
+                            deckToEdit: _choosenDeck.first,
+                          ),
                     ),
                   );
                 }
@@ -341,11 +354,10 @@ class _DeckScreenState extends State<DeckScreen> {
             itemCount: decks.length,
             itemBuilder: (context, index) {
               final deck = decks[index];
-
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 8),
                 color:
-                    _choosenDeck?.id == deck.id
+                    isChoosenDeck(deck.id, _choosenDeck)
                         ? Theme.of(context).primaryColor
                         : null,
                 child: ListTile(
@@ -474,11 +486,25 @@ class _DeckScreenState extends State<DeckScreen> {
                   ),
                   onLongPress: () {
                     setState(() {
-                      _choosenDeck = deck;
+                      if (isChoosenDeck(deck.id, _choosenDeck)) {
+                        _choosenDeck.removeWhere((e) => e.id == deck.id);
+                      } else {
+                        _choosenDeck.add(deck);
+                      }
                     });
                   },
                   onTap: () {
-                    _navigateToDeckDetailScreen(deck);
+                    if (_choosenDeck.isEmpty) {
+                      _navigateToDeckDetailScreen(deck);
+                    } else {
+                      setState(() {
+                        if (isChoosenDeck(deck.id, _choosenDeck)) {
+                          _choosenDeck.removeWhere((e) => e.id == deck.id);
+                        } else {
+                          _choosenDeck.add(deck);
+                        }
+                      });
+                    }
                   },
                 ),
               );

@@ -32,10 +32,9 @@ class CardListScreen extends StatefulWidget {
 class _cardListScreenState extends State<CardListScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  Deck? _choosenDeck;
-  FlashCard? _choosenCard;
+  final Set<Deck> _choosenDeck = {};
+  final Set<FlashCard> _choosenCard = {};
   bool? _currentFrom;
-  int _lenght = 0;
 
   @override
   void initState() {
@@ -124,8 +123,8 @@ class _cardListScreenState extends State<CardListScreen> {
 
   void _navigateToCreateDeckScreen() {
     setState(() {
-      _choosenDeck = null;
-      _choosenCard = null;
+      _choosenDeck.clear();
+      _choosenCard.clear();
     });
     Navigator.push(
       context,
@@ -139,8 +138,8 @@ class _cardListScreenState extends State<CardListScreen> {
 
   void _navigateToDeckDetailScreen(Deck deck) {
     setState(() {
-      _choosenDeck = null;
-      _choosenCard = null;
+      _choosenDeck.clear();
+      _choosenCard.clear();
     });
     Navigator.push(
       context,
@@ -154,8 +153,8 @@ class _cardListScreenState extends State<CardListScreen> {
 
   void _navigateToCreateCardScreen() {
     setState(() {
-      _choosenDeck = null;
-      _choosenCard = null;
+      _choosenDeck.clear();
+      _choosenCard.clear();
     });
     if (widget.parentId == null) {
       if (mounted) {
@@ -196,9 +195,6 @@ class _cardListScreenState extends State<CardListScreen> {
   }
 
   Future<void> deleteCardOnly(String cardId) async {
-    setState(() {
-      _choosenCard = null;
-    });
     try {
       await FirebaseFirestore.instance
           .collection('flashcards')
@@ -219,18 +215,20 @@ class _cardListScreenState extends State<CardListScreen> {
         centerTitle: true,
         backgroundColor: Theme.of(context).primaryColor,
         actions: [
-          if (_choosenDeck != null || _choosenCard != null)
+          if (_choosenDeck.isNotEmpty || _choosenCard.isNotEmpty)
             PopupMenuButton(
               icon: Icon(Icons.more_vert),
               itemBuilder:
                   (BuildContext context) => <PopupMenuEntry<MenuAction>>[
-                    const PopupMenuItem<MenuAction>(
-                      value: MenuAction.edit,
-                      child: ListTile(
-                        leading: Icon(Icons.edit),
-                        title: Text('Edit'),
+                    if ((_choosenDeck.length == 1 && _choosenCard.isEmpty) ||
+                        (_choosenCard.length == 1 && _choosenDeck.isEmpty))
+                      const PopupMenuItem<MenuAction>(
+                        value: MenuAction.edit,
+                        child: ListTile(
+                          leading: Icon(Icons.edit),
+                          title: Text('Edit'),
+                        ),
                       ),
-                    ),
                     const PopupMenuItem<MenuAction>(
                       value: MenuAction.delete,
                       child: ListTile(
@@ -241,22 +239,28 @@ class _cardListScreenState extends State<CardListScreen> {
                   ],
               onSelected: (MenuAction action) async {
                 if (action == MenuAction.delete) {
-                  if (_choosenDeck != null) {
+                  if (_choosenDeck.isNotEmpty) {
                     await showAlertDeleteDeckDialog(context, _choosenDeck);
                     setState(() {
-                      _choosenDeck = null;
+                      _choosenDeck.clear();
                     });
-                  } else {
-                    deleteCardOnly(_choosenCard!.cardId);
+                  }
+                  if (_choosenCard.isNotEmpty) {
+                    for (FlashCard c in _choosenCard) {
+                      await deleteCardOnly(c.cardId);
+                    }
+                    setState(() {
+                      _choosenCard.clear();
+                    });
                   }
                 } else if (action == MenuAction.edit) {
-                  _choosenDeck != null
+                  _choosenDeck.isNotEmpty
                       ? Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder:
                               (context) => CreateEditDeckScreen(
-                                deckToEdit: _choosenDeck,
+                                deckToEdit: _choosenDeck.first,
                               ),
                         ),
                       )
@@ -265,8 +269,8 @@ class _cardListScreenState extends State<CardListScreen> {
                         MaterialPageRoute(
                           builder:
                               (context) => CreateEditCardScreen(
-                                existingCard: _choosenCard,
-                                deckId: _choosenCard!.deckId,
+                                existingCard: _choosenCard.first,
+                                deckId: _choosenCard.first.deckId,
                               ),
                         ),
                       );
@@ -322,7 +326,7 @@ class _cardListScreenState extends State<CardListScreen> {
                         borderRadius: BorderRadius.zero,
                       ),
                       color:
-                          _choosenDeck?.id == deck.id
+                          isChoosenDeck(deck.id, _choosenDeck)
                               ? Theme.of(context).primaryColor
                               : null,
                       child: ListTile(
@@ -459,11 +463,27 @@ class _cardListScreenState extends State<CardListScreen> {
                         ),
                         onLongPress: () {
                           setState(() {
-                            _choosenDeck = deck;
+                            if (isChoosenDeck(deck.id, _choosenDeck)) {
+                              _choosenDeck.removeWhere((e) => e.id == deck.id);
+                            } else {
+                              _choosenDeck.add(deck);
+                            }
                           });
                         },
                         onTap: () {
-                          _navigateToDeckDetailScreen(deck);
+                          if (_choosenDeck.isEmpty && _choosenCard.isEmpty) {
+                            _navigateToDeckDetailScreen(deck);
+                          } else {
+                            setState(() {
+                              if (isChoosenDeck(deck.id, _choosenDeck)) {
+                                _choosenDeck.removeWhere(
+                                  (e) => e.id == deck.id,
+                                );
+                              } else {
+                                _choosenDeck.add(deck);
+                              }
+                            });
+                          }
                         },
                       ),
                     );
@@ -507,7 +527,9 @@ class _cardListScreenState extends State<CardListScreen> {
                     final card = cards[index];
                     return Card(
                       color:
-                          _choosenCard?.cardId == card.cardId
+                          _choosenCard
+                                  .where((e) => e.cardId == card.cardId)
+                                  .isNotEmpty
                               ? Theme.of(context).primaryColor
                               : null,
                       shape: RoundedRectangleBorder(
@@ -533,21 +555,44 @@ class _cardListScreenState extends State<CardListScreen> {
                         ),
                         onLongPress: () {
                           setState(() {
-                            _choosenCard = card;
+                            if (_choosenCard
+                                .where((e) => e.cardId == card.cardId)
+                                .isEmpty) {
+                              _choosenCard.add(card);
+                            } else {
+                              _choosenCard.remove(card);
+                            }
                           });
                         },
                         onTap:
                             () => {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => CreateEditCardScreen(
-                                        existingCard: card,
-                                        deckId: card.deckId,
-                                      ),
-                                ),
-                              ),
+                              if (_choosenCard.isEmpty && _choosenDeck.isEmpty)
+                                {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => CreateEditCardScreen(
+                                            existingCard: card,
+                                            deckId: card.deckId,
+                                          ),
+                                    ),
+                                  ),
+                                }
+                              else
+                                {
+                                  setState(() {
+                                    if (_choosenCard
+                                        .where((e) => e.cardId == card.cardId)
+                                        .isEmpty) {
+                                      _choosenCard.add(card);
+                                    } else {
+                                      _choosenCard.removeWhere(
+                                        (e) => e.cardId == card.cardId,
+                                      );
+                                    }
+                                  }),
+                                },
                             },
                       ),
                     );

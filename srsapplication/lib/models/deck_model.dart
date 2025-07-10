@@ -9,8 +9,6 @@ class Deck {
   final String? description;
   final Timestamp createdAt;
   final Timestamp? updatedAt;
-  final String? languageFrom;
-  final String? languageTo;
   final int cardCount;
   final String? parentId;
 
@@ -23,8 +21,6 @@ class Deck {
     this.description,
     required this.createdAt,
     this.updatedAt,
-    this.languageFrom,
-    this.languageTo,
     this.cardCount = 0,
     this.parentId,
   });
@@ -41,8 +37,6 @@ class Deck {
       description: data?['description'],
       createdAt: data?['createdAt'] ?? Timestamp.now(),
       updatedAt: data?['updatedAt'] as Timestamp?,
-      languageFrom: data?['languageFrom'],
-      languageTo: data?['languageTo'],
       cardCount: data?['cardCount'] ?? 0,
       parentId: data?['parentId'],
     );
@@ -55,8 +49,6 @@ class Deck {
       if (description != null) 'description': description,
       'createdAt': createdAt,
       if (updatedAt != null) 'updatedAt': updatedAt,
-      if (languageFrom != null) 'languageFrom': languageFrom,
-      if (languageTo != null) 'languageTo': languageTo,
       'cardCount': cardCount,
       if (parentId != null) 'parentId': parentId,
     };

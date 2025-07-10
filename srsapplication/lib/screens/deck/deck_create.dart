@@ -38,8 +38,6 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
     _descriptionController = TextEditingController(
       text: widget.deckToEdit?.description ?? '',
     );
-    _selectedLanguageFrom = widget.deckToEdit?.languageFrom;
-    _selectedLanguageTo = widget.deckToEdit?.languageTo;
   }
 
   @override
@@ -174,54 +172,6 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
-              ),
-              const SizedBox(height: 24.0),
-              Text(
-                'Original language (From):',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              DropdownButton<String>(
-                value: _selectedLanguageFrom,
-                hint: const Text('Select a language'),
-                isExpanded: true,
-                items:
-                    <String>['en', 'de', 'es', 'fr', 'it', 'uk', 'pl'].map((
-                      String value,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value.toUpperCase()),
-                      );
-                    }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedLanguageFrom = newValue;
-                  });
-                },
-              ),
-              const SizedBox(height: 16.0),
-              Text(
-                'Translation language (To):',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              DropdownButton<String>(
-                value: _selectedLanguageTo,
-                hint: const Text('Select a language'),
-                isExpanded: true,
-                items:
-                    <String>['en', 'de', 'es', 'fr', 'it', 'uk', 'pl'].map((
-                      String value,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value.toUpperCase()),
-                      );
-                    }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedLanguageTo = newValue;
-                  });
-                },
               ),
               const SizedBox(height: 32.0),
               ElevatedButton.icon(
