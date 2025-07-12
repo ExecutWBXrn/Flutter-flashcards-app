@@ -15,10 +15,12 @@ class CardListScreen extends StatefulWidget {
   final String parentId;
   final String? parentDeckName;
   final bool? toFrom;
+  final List<String>? parentDeckIds;
 
   const CardListScreen({
     super.key,
     required this.parentId,
+    required this.parentDeckIds,
     this.parentDeckName,
     this.toFrom,
   });
@@ -130,7 +132,10 @@ class _cardListScreenState extends State<CardListScreen> {
       context,
       MaterialPageRoute(
         builder:
-            (context) => CreateEditDeckScreen(parentDeckId: widget.parentId),
+            (context) => CreateEditDeckScreen(
+              parentDeckId: widget.parentId,
+              ancestorDeckIds: widget.parentDeckIds,
+            ),
       ),
     );
     print("Перехід на екран створення колоди");
@@ -141,12 +146,17 @@ class _cardListScreenState extends State<CardListScreen> {
       _choosenDeck.clear();
       _choosenCard.clear();
     });
+    List<String>? _parentAndCurrentIds = widget.parentDeckIds;
+    _parentAndCurrentIds?.add(deck.id);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
-            (context) =>
-                CardListScreen(parentId: deck.id, parentDeckName: deck.name),
+            (context) => CardListScreen(
+              parentId: deck.id,
+              parentDeckName: deck.name,
+              parentDeckIds: _parentAndCurrentIds,
+            ),
       ),
     );
   }

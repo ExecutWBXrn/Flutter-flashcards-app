@@ -84,9 +84,7 @@ Future<void> showAlertDeleteDeckDialog(
         actions: <Widget>[
           FilledButton(
             onPressed: () {
-              for (Deck deck in choosenDeck) {
-                deleteDeck(deck.id);
-              }
+              deleteDeck(choosenDeck);
               Navigator.of(dialogContext).pop();
             },
             child: Text("Yes"),
@@ -104,7 +102,7 @@ Future<void> showAlertDeleteDeckDialog(
   );
 }
 
-Future<void> deleteDeck(String deckId) async {
+Future<void> deleteDeck(Set<Deck> deck) async {
   final deckService = DeckService();
-  await deckService.deleteDeckHierarchically(deckId);
+  await deckService.deleteDeckHierarchically(deck);
 }

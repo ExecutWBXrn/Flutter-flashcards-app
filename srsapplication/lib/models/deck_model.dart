@@ -11,6 +11,7 @@ class Deck {
   final Timestamp? updatedAt;
   final int cardCount;
   final String? parentId;
+  final List<String> ancestorIds;
 
   bool get isTopLevel => parentId == null;
 
@@ -23,6 +24,7 @@ class Deck {
     this.updatedAt,
     this.cardCount = 0,
     this.parentId,
+    required this.ancestorIds,
   });
 
   factory Deck.fromFirestore(
@@ -39,6 +41,9 @@ class Deck {
       updatedAt: data?['updatedAt'] as Timestamp?,
       cardCount: data?['cardCount'] ?? 0,
       parentId: data?['parentId'],
+      ancestorIds: List<String>.from(
+        data?['ancestorIds'] as List<dynamic>? ?? [],
+      ),
     );
   }
 
@@ -46,6 +51,7 @@ class Deck {
     return {
       'userId': userId,
       'name': name,
+      'ancestorIds': ancestorIds,
       if (description != null) 'description': description,
       'createdAt': createdAt,
       if (updatedAt != null) 'updatedAt': updatedAt,
@@ -62,6 +68,7 @@ class Deck {
     Timestamp? createdAt,
     Timestamp? updatedAt,
     int? cardCount,
+    List<String>? ancestorIds,
   }) {
     return Deck(
       id: id ?? this.id,
@@ -71,6 +78,7 @@ class Deck {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       cardCount: cardCount ?? this.cardCount,
+      ancestorIds: ancestorIds ?? this.ancestorIds,
     );
   }
 }
@@ -78,38 +86,30 @@ class Deck {
 class DeckService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  int counter = 0;
 
-  Future<void> deleteCardCount(
-    String deckId, {
-    bool first = true,
-    int count = 0,
-  }) async {
+  Future<void> deleteCardCount(List<String> deckId) async {
     try {
-      final deckDocRef = _firestore.collection('decks').doc(deckId);
-      if (!first) {
-        await deckDocRef.update({'cardCount': FieldValue.increment(-count)});
+      final User? user = _auth.currentUser;
+      WriteBatch wBatch = _firestore.batch();
+      QuerySnapshot qsnap =
+          await _firestore
+              .collection("decks")
+              .where("userId", isEqualTo: user?.uid)
+              .where(FieldPath.documentId, whereIn: deckId)
+              .get();
+      for (DocumentSnapshot snp in qsnap.docs) {
+        wBatch.update(snp.reference, {
+          "cardCount": FieldValue.increment(-counter),
+        });
       }
-      try {
-        DocumentSnapshot snap = await deckDocRef.get();
-        if (snap.exists) {
-          String? parentId = (snap.data() as Map<String, dynamic>)['parentId'];
-          int countFetched = count;
-          if (first) {
-            countFetched = (snap.data() as Map<String, dynamic>)['cardCount'];
-          }
-          if (parentId != null) {
-            deleteCardCount(parentId, first: false, count: countFetched);
-          }
-        }
-      } catch (e) {
-        print("Помилка оновлення лічильника карток у колоді: $e");
-      }
+      await wBatch.commit();
     } catch (e) {
       print("Помилка оновлення лічильника карток у колоді: $e");
     }
   }
 
-  Future<void> deleteDeckHierarchically(String deckId) async {
+  Future<void> deleteDeckHierarchically(Set<Deck> deckId) async {
     final User? user = _auth.currentUser;
     if (user == null) {
       throw Exception("Користувач не авторизований.");
@@ -117,6 +117,7 @@ class DeckService {
 
     List<String> decksToDelete = [];
     List<String> cardsToDelete = [];
+    List<String> anyTopLevelDeck = deckId.first.ancestorIds;
 
     await _collectDecksAndCardsForDeletion(
       deckId,
@@ -135,7 +136,6 @@ class DeckService {
     print("Картки до видалення: $cardsToDelete");
 
     if (cardsToDelete.isNotEmpty) {
-      deleteCardCount(deckId);
       WriteBatch cardBatch = _firestore.batch();
       for (String cardId in cardsToDelete) {
         cardBatch.delete(_firestore.collection('flashcards').doc(cardId));
@@ -155,6 +155,7 @@ class DeckService {
       }
       try {
         await deckBatch.commit();
+        deleteCardCount(anyTopLevelDeck);
         print("Колоди успішно видалено.");
       } catch (e) {
         print("Помилка під час видалення колод: $e");
@@ -163,44 +164,100 @@ class DeckService {
   }
 
   Future<void> _collectDecksAndCardsForDeletion(
-    String currentDeckId,
+    Set<Deck> rootDecks,
     String userId,
-    List<String> decksToDelete,
-    List<String> cardsToDelete,
+    List<String> decksToDeleteCollector,
+    List<String> cardsToDeleteCollector,
   ) async {
-    if (!decksToDelete.contains(currentDeckId)) {
-      decksToDelete.add(currentDeckId);
+    if (rootDecks.isEmpty) {
+      print("Набір початкових колод порожній.");
+      return;
     }
-
-    final cardsSnapshot =
-        await _firestore
-            .collection('flashcards')
-            .where('userId', isEqualTo: userId)
-            .where('deckId', isEqualTo: currentDeckId)
-            .get();
-
-    for (var doc in cardsSnapshot.docs) {
-      if (!cardsToDelete.contains(doc.id)) {
-        cardsToDelete.add(doc.id);
+    for (Deck deck in rootDecks) {
+      if (!decksToDeleteCollector.contains(deck.id)) {
+        decksToDeleteCollector.add(deck.id);
+        counter += deck.cardCount;
       }
     }
 
-    final childrenDecksSnapshot =
-        await _firestore
-            .collection('decks')
-            .where('userId', isEqualTo: userId)
-            .where('parentId', isEqualTo: currentDeckId)
-            .get();
+    List<String> rootDeckIds = rootDecks.map((deck) => deck.id).toList();
 
-    for (var doc in childrenDecksSnapshot.docs) {
-      if (!decksToDelete.contains(doc.id)) {
-        await _collectDecksAndCardsForDeletion(
-          doc.id,
-          userId,
-          decksToDelete,
-          cardsToDelete,
+    const int arrayContainsAnyLimit = 30;
+    List<Future<QuerySnapshot<Map<String, dynamic>>>> childrenDeckFutures = [];
+
+    for (int i = 0; i < rootDeckIds.length; i += arrayContainsAnyLimit) {
+      List<String> sublist = rootDeckIds.sublist(
+        i,
+        i + arrayContainsAnyLimit > rootDeckIds.length
+            ? rootDeckIds.length
+            : i + arrayContainsAnyLimit,
+      );
+      if (sublist.isNotEmpty) {
+        childrenDeckFutures.add(
+          _firestore
+              .collection('decks')
+              .where('userId', isEqualTo: userId)
+              .where('ancestorIds', arrayContainsAny: sublist)
+              .get(),
         );
       }
     }
+
+    final List<QuerySnapshot<Map<String, dynamic>>> childrenDeckSnapshots =
+        await Future.wait(childrenDeckFutures);
+
+    for (final snapshot in childrenDeckSnapshots) {
+      for (var doc in snapshot.docs) {
+        if (!decksToDeleteCollector.contains(doc.id)) {
+          decksToDeleteCollector.add(doc.id);
+        }
+      }
+    }
+
+    if (decksToDeleteCollector.isEmpty) {
+      print(
+        "Немає колод для видалення (початкових або дочірніх), картки не шукаємо.",
+      );
+      return;
+    }
+
+    const int whereInLimit = 30;
+    List<Future<QuerySnapshot<Map<String, dynamic>>>> cardsFutures = [];
+
+    List<String> uniqueDecksToDelete = decksToDeleteCollector.toSet().toList();
+
+    for (int i = 0; i < uniqueDecksToDelete.length; i += whereInLimit) {
+      List<String> sublist = uniqueDecksToDelete.sublist(
+        i,
+        i + whereInLimit > uniqueDecksToDelete.length
+            ? uniqueDecksToDelete.length
+            : i + whereInLimit,
+      );
+      if (sublist.isNotEmpty) {
+        cardsFutures.add(
+          _firestore
+              .collection('flashcards')
+              .where('userId', isEqualTo: userId)
+              .where('deckId', whereIn: sublist)
+              .get(),
+        );
+      }
+    }
+
+    final List<QuerySnapshot<Map<String, dynamic>>> cardsSnapshots =
+        await Future.wait(cardsFutures);
+
+    Set<String> cardsToDeleteSet = cardsToDeleteCollector.toSet();
+    for (final snapshot in cardsSnapshots) {
+      for (var doc in snapshot.docs) {
+        cardsToDeleteSet.add(doc.id);
+      }
+    }
+    cardsToDeleteCollector.clear();
+    cardsToDeleteCollector.addAll(cardsToDeleteSet);
+
+    print(
+      "Зібрано ${decksToDeleteCollector.length} колод та ${cardsToDeleteCollector.length} карток для видалення.",
+    );
   }
 }

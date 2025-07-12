@@ -95,8 +95,11 @@ class _DeckScreenState extends State<DeckScreen> {
       context,
       MaterialPageRoute(
         builder:
-            (context) =>
-                CardListScreen(parentId: deck.id, parentDeckName: deck.name),
+            (context) => CardListScreen(
+              parentId: deck.id,
+              parentDeckName: deck.name,
+              parentDeckIds: [deck.id],
+            ),
       ),
     );
   }

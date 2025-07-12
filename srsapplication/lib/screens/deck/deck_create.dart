@@ -8,8 +8,14 @@ import '../../func/messages/snackbars.dart';
 class CreateEditDeckScreen extends StatefulWidget {
   final Deck? deckToEdit;
   final String? parentDeckId;
+  final List<String>? ancestorDeckIds;
 
-  const CreateEditDeckScreen({super.key, this.deckToEdit, this.parentDeckId});
+  const CreateEditDeckScreen({
+    super.key,
+    this.deckToEdit,
+    this.parentDeckId,
+    this.ancestorDeckIds,
+  });
 
   @override
   State<CreateEditDeckScreen> createState() => _CreateEditDeckScreenState();
@@ -77,6 +83,7 @@ class _CreateEditDeckScreenState extends State<CreateEditDeckScreen> {
           'languageTo': _selectedLanguageTo,
           'updatedAt': now,
           'parentId': widget.deckToEdit?.parentId ?? widget.parentDeckId,
+          'ancestorIds': widget.ancestorDeckIds,
         };
 
         if (_isEditing && widget.deckToEdit != null) {
